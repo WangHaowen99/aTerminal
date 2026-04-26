@@ -35,6 +35,23 @@ android {
     }
 }
 
+val sharedApkOutputDir = providers
+    .gradleProperty("aterminal.apkOutputDir")
+    .orElse("/mnt/e/code/aTerminal/output")
+
+val copyDebugApkToOutput = tasks.register<Copy>("copyDebugApkToOutput") {
+    group = "distribution"
+    description = "Copies the debug APK to the shared aTerminal output directory."
+    dependsOn("assembleDebug")
+    from(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk"))
+    into(sharedApkOutputDir.map { file(it) })
+    rename { "aTerminal-debug.apk" }
+}
+
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+    finalizedBy(copyDebugApkToOutput)
+}
+
 dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
