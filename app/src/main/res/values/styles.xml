@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.ATerminal" parent="android:style/Theme.Material.NoActionBar" />
+</resources>
