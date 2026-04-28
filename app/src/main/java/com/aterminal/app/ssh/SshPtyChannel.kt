@@ -1,7 +1,5 @@
 package com.aterminal.app.ssh
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
@@ -20,10 +18,8 @@ class SshPtyChannel(
     }
 
     suspend fun write(bytes: ByteArray) {
-        withContext(Dispatchers.IO) {
-            output.write(bytes)
-            output.flush()
-        }
+        output.write(bytes)
+        output.flush()
     }
 
     suspend fun resize(size: SshPtySize) {

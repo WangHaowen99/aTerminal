@@ -27,7 +27,7 @@ class AterminalAppNavigationTest {
             .assertIsDisplayed()
 
         composeRule.onNodeWithText("Terminal").performClick()
-        composeRule.onNodeWithText("Interactive SSH output will appear here once a host or tmux session is attached.")
+        composeRule.onNodeWithText("No PTY attached. Launch or attach a tmux session to stream terminal output here.")
             .assertIsDisplayed()
 
         composeRule.onNodeWithText("Settings").performClick()
