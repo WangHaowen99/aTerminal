@@ -143,6 +143,40 @@ class LocalDataModelTest {
         assertTrue(agentSessionRepository.observeForWorkspace(workspaceId).first().isEmpty())
     }
 
+    @Test
+    fun agentSessionRepositoryUpsertsLaunchedSessionsByWorkspaceAgentAndTmuxName() = runTest {
+        val hostId = hostRepository.create(hostFixture())
+        val workspaceId = workspaceRepository.create(workspaceFixture(hostId = hostId))
+
+        val firstId = agentSessionRepository.saveLaunchedSession(
+            AgentSessionEntity(
+                hostId = hostId,
+                workspaceId = workspaceId,
+                agentType = AgentType.CODEX,
+                tmuxSessionName = "aterm:codex:a-terminal",
+                agentSessionRef = "codex-1",
+                lastAttachedAtEpochMillis = 700,
+            ),
+        )
+        val secondId = agentSessionRepository.saveLaunchedSession(
+            AgentSessionEntity(
+                hostId = hostId,
+                workspaceId = workspaceId,
+                agentType = AgentType.CODEX,
+                tmuxSessionName = "aterm:codex:a-terminal",
+                agentSessionRef = "codex-2",
+                lastAttachedAtEpochMillis = 900,
+            ),
+        )
+
+        assertEquals(firstId, secondId)
+
+        val sessions = agentSessionRepository.observeForWorkspace(workspaceId).first()
+        assertEquals(1, sessions.size)
+        assertEquals("codex-2", sessions.single().agentSessionRef)
+        assertEquals(900, sessions.single().lastAttachedAtEpochMillis)
+    }
+
     private fun hostFixture() = HostEntity(
         displayName = "Dev Box",
         hostname = "dev.example.com",
