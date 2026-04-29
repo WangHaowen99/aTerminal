@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aterminal.app.readability.AgentOutputParser
+import com.aterminal.app.readability.ReadingModeScreen
 
 @Composable
 fun TerminalScreen(
@@ -64,6 +66,8 @@ fun TerminalContent(
     val clipboard = LocalClipboardManager.current
     var draftInput by remember { mutableStateOf("") }
     var lastViewport by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var displayMode by remember { mutableStateOf(TerminalDisplayMode.Terminal) }
+    val parser = remember { AgentOutputParser() }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -73,31 +77,66 @@ fun TerminalContent(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            SelectionContainer(
+            Row(
                 modifier = Modifier
-                    .weight(1f)
                     .fillMaxWidth()
-                    .onSizeChanged { size ->
-                        val columns = (size.width / APPROXIMATE_CELL_WIDTH_PX)
-                            .coerceAtLeast(MIN_TERMINAL_COLUMNS)
-                        val rows = (size.height / APPROXIMATE_CELL_HEIGHT_PX)
-                            .coerceAtLeast(MIN_TERMINAL_ROWS)
-                        val viewport = columns to rows
-                        if (viewport != lastViewport) {
-                            lastViewport = viewport
-                            onViewportResize(columns, rows)
-                        }
-                    }
-                    .background(MaterialTheme.colorScheme.background)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    text = state.screenText.ifBlank { "No PTY attached. Launch or attach a tmux session to stream terminal output here." },
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodyMedium,
+                Button(
+                    onClick = { displayMode = TerminalDisplayMode.Terminal },
+                    enabled = displayMode != TerminalDisplayMode.Terminal,
+                ) {
+                    Text("Terminal")
+                }
+                OutlinedButton(
+                    onClick = { displayMode = TerminalDisplayMode.Reading },
+                    enabled = displayMode != TerminalDisplayMode.Reading,
+                ) {
+                    Text("Reading")
+                }
+            }
+
+            if (displayMode == TerminalDisplayMode.Reading) {
+                ReadingModeScreen(
+                    blocks = parser.parse(state.screenText),
+                    onCopyRaw = { raw ->
+                        clipboard.setText(AnnotatedString(raw))
+                    },
+                    onJumpToTerminal = {
+                        displayMode = TerminalDisplayMode.Terminal
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                 )
+            } else {
+                SelectionContainer(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .onSizeChanged { size ->
+                            val columns = (size.width / APPROXIMATE_CELL_WIDTH_PX)
+                                .coerceAtLeast(MIN_TERMINAL_COLUMNS)
+                            val rows = (size.height / APPROXIMATE_CELL_HEIGHT_PX)
+                                .coerceAtLeast(MIN_TERMINAL_ROWS)
+                            val viewport = columns to rows
+                            if (viewport != lastViewport) {
+                                lastViewport = viewport
+                                onViewportResize(columns, rows)
+                            }
+                        }
+                        .background(MaterialTheme.colorScheme.background)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                ) {
+                    Text(
+                        text = state.screenText.ifBlank { "No PTY attached. Launch or attach a tmux session to stream terminal output here." },
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
 
             QuickKeyBar(onKey = onQuickKey)
@@ -173,3 +212,8 @@ private const val APPROXIMATE_CELL_HEIGHT_PX = 28
 private const val APPROXIMATE_CELL_WIDTH_PX = 14
 private const val MIN_TERMINAL_COLUMNS = 20
 private const val MIN_TERMINAL_ROWS = 5
+
+private enum class TerminalDisplayMode {
+    Terminal,
+    Reading,
+}

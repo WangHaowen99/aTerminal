@@ -33,6 +33,7 @@ class AterminalAppNavigationTest {
         composeRule.onNodeWithText("Terminal").performClick()
         composeRule.onNodeWithText("No PTY attached. Launch or attach a tmux session to stream terminal output here.")
             .assertIsDisplayed()
+        composeRule.onNodeWithText("Reading").assertIsDisplayed()
 
         composeRule.onNodeWithText("Settings").performClick()
         composeRule.onNodeWithText("Configure default agent flags, SSH behavior, and reading-mode preferences.")
