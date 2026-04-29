@@ -32,6 +32,23 @@ class TerminalSessionViewModelTest {
     }
 
     @Test
+    fun ptyEndOfStreamReportsReconnectMessage() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val viewModel = TerminalSessionViewModel(
+            scope = TestScope(dispatcher),
+            ioDispatcher = dispatcher,
+        )
+
+        viewModel.attach(pty(inputText = "partial output"))
+        advanceUntilIdle()
+
+        assertEquals(
+            "SSH stream ended. Reconnect to reattach your tmux session.",
+            viewModel.state.value.reconnectMessage,
+        )
+    }
+
+    @Test
     fun writesUserInputAndQuickKeysToPty() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val remoteInput = ByteArrayOutputStream()

@@ -37,6 +37,11 @@ class TerminalSessionViewModel(
             while (true) {
                 val count = channel.input.read(chunk)
                 if (count < 0) {
+                    mutableState.update {
+                        it.copy(
+                            reconnectMessage = "SSH stream ended. Reconnect to reattach your tmux session.",
+                        )
+                    }
                     break
                 }
                 appendOutput(String(chunk, 0, count, StandardCharsets.UTF_8))
@@ -126,4 +131,5 @@ data class TerminalUiState(
     val scrollbackLines: List<String> = emptyList(),
     val pendingPasteText: String? = null,
     val pasteConfirmationRequired: Boolean = false,
+    val reconnectMessage: String? = null,
 )

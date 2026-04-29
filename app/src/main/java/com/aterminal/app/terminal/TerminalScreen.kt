@@ -48,6 +48,7 @@ fun TerminalScreen(
         onQuickKey = viewModel::sendQuickKey,
         onViewportResize = viewModel::resize,
         onDetach = {},
+        onReconnect = {},
     )
 }
 
@@ -61,6 +62,7 @@ fun TerminalContent(
     onQuickKey: (TerminalQuickKey) -> Unit,
     onViewportResize: (columns: Int, rows: Int) -> Unit,
     onDetach: () -> Unit,
+    onReconnect: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val clipboard = LocalClipboardManager.current
@@ -94,6 +96,26 @@ fun TerminalContent(
                     enabled = displayMode != TerminalDisplayMode.Reading,
                 ) {
                     Text("Reading")
+                }
+            }
+
+            state.reconnectMessage?.let { reconnectMessage ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = reconnectMessage,
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Button(onClick = onReconnect) {
+                        Text("Reconnect")
+                    }
                 }
             }
 
