@@ -21,14 +21,19 @@ class AterminalAppNavigationTest {
     }
 
     @Test
-    fun navigatesToWorkspaceTerminalAndSettingsTabs() {
+    fun navigatesToWorkspaceSessionsTerminalAndSettingsTabs() {
         composeRule.onNodeWithText("Workspaces").performClick()
         composeRule.onNodeWithText("Save project directories, then resume Codex or Claude Code in a few taps.")
             .assertIsDisplayed()
 
-        composeRule.onNodeWithText("Terminal").performClick()
-        composeRule.onNodeWithText("Interactive SSH output will appear here once a host or tmux session is attached.")
+        composeRule.onNodeWithText("Sessions").performClick()
+        composeRule.onNodeWithText("Connect to a host to list active tmux sessions.")
             .assertIsDisplayed()
+
+        composeRule.onNodeWithText("Terminal").performClick()
+        composeRule.onNodeWithText("No PTY attached. Launch or attach a tmux session to stream terminal output here.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Reading").assertIsDisplayed()
 
         composeRule.onNodeWithText("Settings").performClick()
         composeRule.onNodeWithText("Configure default agent flags, SSH behavior, and reading-mode preferences.")

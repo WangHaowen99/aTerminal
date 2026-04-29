@@ -2,6 +2,7 @@ package com.aterminal.app
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -18,6 +19,7 @@ import com.aterminal.app.hosts.HostListScreen
 import com.aterminal.app.settings.SettingsScreen
 import com.aterminal.app.terminal.TerminalScreen
 import com.aterminal.app.theme.ATerminalTheme
+import com.aterminal.app.tmux.TmuxSessionListScreen
 import com.aterminal.app.workspaces.WorkspaceListScreen
 
 @Composable
@@ -29,8 +31,12 @@ fun AterminalApp() {
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             bottomBar = {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ) {
                     AppRoute.primaryRoutes.forEach { route ->
                         NavigationBarItem(
                             selected = currentRoute == route.route,
@@ -57,6 +63,7 @@ fun AterminalApp() {
             ) {
                 composable(AppRoute.Hosts.route) { HostListScreen() }
                 composable(AppRoute.Workspaces.route) { WorkspaceListScreen() }
+                composable(AppRoute.Sessions.route) { TmuxSessionListScreen() }
                 composable(AppRoute.Terminal.route) { TerminalScreen() }
                 composable(AppRoute.Settings.route) { SettingsScreen() }
             }
