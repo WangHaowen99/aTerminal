@@ -7,6 +7,7 @@ enum class AppRoute(
 ) {
     Hosts("hosts", "Hosts", "SSH"),
     Workspaces("workspaces", "Workspaces", "WS"),
+    Sessions("sessions", "Sessions", "MUX"),
     Terminal("terminal", "Terminal", ">_"),
     Settings("settings", "Settings", "CFG");
 

@@ -9,7 +9,7 @@ class AppRouteTest {
         val routes = AppRoute.primaryRoutes.map { it.route }
 
         assertEquals(
-            listOf("hosts", "workspaces", "terminal", "settings"),
+            listOf("hosts", "workspaces", "sessions", "terminal", "settings"),
             routes,
         )
     }

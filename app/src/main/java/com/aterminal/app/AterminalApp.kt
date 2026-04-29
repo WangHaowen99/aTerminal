@@ -19,6 +19,7 @@ import com.aterminal.app.hosts.HostListScreen
 import com.aterminal.app.settings.SettingsScreen
 import com.aterminal.app.terminal.TerminalScreen
 import com.aterminal.app.theme.ATerminalTheme
+import com.aterminal.app.tmux.TmuxSessionListScreen
 import com.aterminal.app.workspaces.WorkspaceListScreen
 
 @Composable
@@ -62,6 +63,7 @@ fun AterminalApp() {
             ) {
                 composable(AppRoute.Hosts.route) { HostListScreen() }
                 composable(AppRoute.Workspaces.route) { WorkspaceListScreen() }
+                composable(AppRoute.Sessions.route) { TmuxSessionListScreen() }
                 composable(AppRoute.Terminal.route) { TerminalScreen() }
                 composable(AppRoute.Settings.route) { SettingsScreen() }
             }

@@ -45,6 +45,7 @@ fun TerminalScreen(
         onCancelPaste = viewModel::cancelPaste,
         onQuickKey = viewModel::sendQuickKey,
         onViewportResize = viewModel::resize,
+        onDetach = {},
     )
 }
 
@@ -57,6 +58,7 @@ fun TerminalContent(
     onCancelPaste: () -> Unit,
     onQuickKey: (TerminalQuickKey) -> Unit,
     onViewportResize: (columns: Int, rows: Int) -> Unit,
+    onDetach: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val clipboard = LocalClipboardManager.current
@@ -140,6 +142,9 @@ fun TerminalContent(
                     },
                 ) {
                     Text("Copy")
+                }
+                OutlinedButton(onClick = onDetach) {
+                    Text("Detach")
                 }
             }
         }

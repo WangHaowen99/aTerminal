@@ -21,9 +21,13 @@ class AterminalAppNavigationTest {
     }
 
     @Test
-    fun navigatesToWorkspaceTerminalAndSettingsTabs() {
+    fun navigatesToWorkspaceSessionsTerminalAndSettingsTabs() {
         composeRule.onNodeWithText("Workspaces").performClick()
         composeRule.onNodeWithText("Save project directories, then resume Codex or Claude Code in a few taps.")
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithText("Sessions").performClick()
+        composeRule.onNodeWithText("Connect to a host to list active tmux sessions.")
             .assertIsDisplayed()
 
         composeRule.onNodeWithText("Terminal").performClick()
