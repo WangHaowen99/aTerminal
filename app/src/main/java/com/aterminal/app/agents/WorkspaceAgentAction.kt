@@ -1,11 +1,12 @@
 package com.aterminal.app.agents
 
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.hosts.RemoteCapabilities
 import com.aterminal.app.tmux.TmuxSessionName
 
 sealed class WorkspaceAgentAction(
     val label: String,
-    private val agentType: AgentType,
+    val agentType: AgentType,
     private val mode: AgentLaunchMode,
     private val sessionSuffix: String? = null,
     private val agentSessionRef: String? = null,
@@ -74,6 +75,31 @@ sealed class WorkspaceAgentAction(
         )
     }
 
+    fun availability(capabilities: RemoteCapabilities?): WorkspaceAgentActionAvailability {
+        if (capabilities == null) {
+            return WorkspaceAgentActionAvailability.Enabled
+        }
+        if (!capabilities.tmux.available) {
+            return WorkspaceAgentActionAvailability.Disabled(
+                capabilities.tmuxInstallGuidance
+                    ?: "tmux is not installed on the remote host.",
+            )
+        }
+
+        val agentAvailable = when (agentType) {
+            AgentType.CODEX -> capabilities.codex.available
+            AgentType.CLAUDE -> capabilities.claude.available
+            AgentType.SHELL -> true
+        }
+        if (agentAvailable) {
+            return WorkspaceAgentActionAvailability.Enabled
+        }
+
+        return WorkspaceAgentActionAvailability.Disabled(
+            "${agentType.displayName} is not installed on the remote host.",
+        )
+    }
+
     companion object {
         val primaryActions: List<WorkspaceAgentAction>
             get() = listOf(
@@ -115,4 +141,19 @@ sealed class WorkspaceAgentAction(
             )
         }
     }
+}
+
+sealed class WorkspaceAgentActionAvailability(
+    val enabled: Boolean,
+    val disabledReason: String?,
+) {
+    object Enabled : WorkspaceAgentActionAvailability(
+        enabled = true,
+        disabledReason = null,
+    )
+
+    class Disabled(reason: String) : WorkspaceAgentActionAvailability(
+        enabled = false,
+        disabledReason = reason,
+    )
 }

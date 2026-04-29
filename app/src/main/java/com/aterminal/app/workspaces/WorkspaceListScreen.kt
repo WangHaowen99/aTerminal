@@ -26,12 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aterminal.app.agents.WorkspaceAgentAction
+import com.aterminal.app.agents.WorkspaceAgentActionAvailability
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.hosts.RemoteCapabilities
 import com.aterminal.app.ui.EmptyStateScreen
 
 @Composable
 fun WorkspaceListScreen(
     workspaces: List<WorkspaceEntity> = emptyList(),
+    capabilities: RemoteCapabilities? = null,
     onActionSelected: (WorkspaceEntity, WorkspaceAgentAction) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
@@ -69,6 +72,7 @@ fun WorkspaceListScreen(
             ) { workspace ->
                 WorkspaceCard(
                     workspace = workspace,
+                    capabilities = capabilities,
                     onActionSelected = onActionSelected,
                     onAdvancedClick = { advancedWorkspace = workspace },
                 )
@@ -79,6 +83,7 @@ fun WorkspaceListScreen(
     advancedWorkspace?.let { workspace ->
         ResumeByIdDialog(
             workspace = workspace,
+            capabilities = capabilities,
             onDismiss = { advancedWorkspace = null },
             onActionSelected = { action ->
                 onActionSelected(workspace, action)
@@ -91,6 +96,7 @@ fun WorkspaceListScreen(
 @Composable
 private fun WorkspaceCard(
     workspace: WorkspaceEntity,
+    capabilities: RemoteCapabilities?,
     onActionSelected: (WorkspaceEntity, WorkspaceAgentAction) -> Unit,
     onAdvancedClick: () -> Unit,
 ) {
@@ -125,15 +131,30 @@ private fun WorkspaceCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 WorkspaceAgentAction.primaryActions.forEach { action ->
+                    val availability = action.availability(capabilities)
                     Button(
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = availability.enabled,
                         onClick = { onActionSelected(workspace, action) },
                     ) {
                         Text(action.label)
                     }
+                    availability.disabledReason?.let { reason ->
+                        Text(
+                            text = reason,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = WorkspaceAgentAction.ResumeCodexLatest
+                        .availability(capabilities)
+                        .enabled ||
+                        WorkspaceAgentAction.ContinueClaude
+                            .availability(capabilities)
+                            .enabled,
                     onClick = onAdvancedClick,
                 ) {
                     Text("Advanced")
@@ -146,11 +167,22 @@ private fun WorkspaceCard(
 @Composable
 private fun ResumeByIdDialog(
     workspace: WorkspaceEntity,
+    capabilities: RemoteCapabilities?,
     onDismiss: () -> Unit,
     onActionSelected: (WorkspaceAgentAction) -> Unit,
 ) {
     var sessionId by remember(workspace.id) { mutableStateOf("") }
     val canSubmit = sessionId.isNotBlank()
+    val codexAction = remember(sessionId) {
+        sessionId.takeIf { it.isNotBlank() }?.let(WorkspaceAgentAction::resumeCodexById)
+    }
+    val claudeAction = remember(sessionId) {
+        sessionId.takeIf { it.isNotBlank() }?.let(WorkspaceAgentAction::resumeClaudeById)
+    }
+    val codexAvailability = codexAction?.availability(capabilities)
+        ?: WorkspaceAgentActionAvailability.Disabled("Agent session id is required.")
+    val claudeAvailability = claudeAction?.availability(capabilities)
+        ?: WorkspaceAgentActionAvailability.Disabled("Agent session id is required.")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -170,6 +202,16 @@ private fun ResumeByIdDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                listOfNotNull(
+                    codexAvailability.disabledReason,
+                    claudeAvailability.disabledReason,
+                ).distinct().forEach { reason ->
+                    Text(
+                        text = reason,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -177,17 +219,17 @@ private fun ResumeByIdDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
-                    enabled = canSubmit,
+                    enabled = canSubmit && codexAvailability.enabled,
                     onClick = {
-                        onActionSelected(WorkspaceAgentAction.resumeCodexById(sessionId))
+                        codexAction?.let(onActionSelected)
                     },
                 ) {
                     Text("Resume Codex by ID")
                 }
                 Button(
-                    enabled = canSubmit,
+                    enabled = canSubmit && claudeAvailability.enabled,
                     onClick = {
-                        onActionSelected(WorkspaceAgentAction.resumeClaudeById(sessionId))
+                        claudeAction?.let(onActionSelected)
                     },
                 ) {
                     Text("Resume Claude by ID")

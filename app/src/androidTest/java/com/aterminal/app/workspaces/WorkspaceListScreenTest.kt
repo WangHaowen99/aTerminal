@@ -1,6 +1,7 @@
 package com.aterminal.app.workspaces
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -8,6 +9,8 @@ import androidx.compose.ui.test.performTextInput
 import com.aterminal.app.agents.AgentType
 import com.aterminal.app.agents.WorkspaceAgentAction
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.hosts.RemoteCapabilities
+import com.aterminal.app.hosts.RemoteToolCapability
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -70,6 +73,70 @@ class WorkspaceListScreenTest {
 
         assertEquals(listOf("aTerminal:Resume Codex by ID"), selected)
     }
+
+    @Test
+    fun disablesUnavailableAgentActionsWithClearMessages() {
+        composeRule.setContent {
+            WorkspaceListScreen(
+                workspaces = listOf(workspace()),
+                capabilities = capabilities(tmux = true, codex = false, claude = true),
+                onActionSelected = { _, _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("Start Codex").assertIsNotEnabled()
+        composeRule.onNodeWithText("Codex is not installed on the remote host.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Start Claude").assertIsDisplayed()
+    }
+
+    @Test
+    fun showsTmuxInstallGuidanceWhenTmuxIsMissing() {
+        composeRule.setContent {
+            WorkspaceListScreen(
+                workspaces = listOf(workspace()),
+                capabilities = capabilities(tmux = false, codex = true, claude = true),
+                onActionSelected = { _, _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("Shell").assertIsNotEnabled()
+        composeRule.onNodeWithText(
+            "Install tmux on the remote host before launching persistent agent sessions.",
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun disablesUnavailableAdvancedResumeActions() {
+        composeRule.setContent {
+            WorkspaceListScreen(
+                workspaces = listOf(workspace()),
+                capabilities = capabilities(tmux = true, codex = false, claude = true),
+                onActionSelected = { _, _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("Advanced").performClick()
+        composeRule.onNodeWithText("Agent session id").performTextInput("session-42")
+
+        composeRule.onNodeWithText("Resume Codex by ID").assertIsNotEnabled()
+        composeRule.onNodeWithText("Resume Claude by ID").assertIsDisplayed()
+    }
+
+    private fun capabilities(
+        tmux: Boolean,
+        codex: Boolean,
+        claude: Boolean,
+    ) = RemoteCapabilities(
+        tmux = capability(tmux),
+        codex = capability(codex),
+        claude = capability(claude),
+    )
+
+    private fun capability(available: Boolean) = RemoteToolCapability(
+        available = available,
+        path = if (available) "/usr/bin/tool" else null,
+    )
 
     private fun workspace() = WorkspaceEntity(
         id = 7,
