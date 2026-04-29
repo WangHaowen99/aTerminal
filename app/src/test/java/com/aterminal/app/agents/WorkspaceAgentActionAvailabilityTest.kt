@@ -23,11 +23,11 @@ class WorkspaceAgentActionAvailabilityTest {
         )
 
         assertEquals(
-            "Install tmux on the remote host before launching persistent agent sessions.",
+            "tmux is not installed on the remote host. Install tmux before launching persistent agent sessions.",
             WorkspaceAgentAction.StartCodex.availability(capabilities).disabledReason,
         )
         assertEquals(
-            "Install tmux on the remote host before launching persistent agent sessions.",
+            "tmux is not installed on the remote host. Install tmux before launching persistent agent sessions.",
             WorkspaceAgentAction.Shell.availability(capabilities).disabledReason,
         )
     }
@@ -41,11 +41,11 @@ class WorkspaceAgentActionAvailabilityTest {
         )
 
         assertEquals(
-            "Codex is not installed on the remote host.",
+            "Codex is not installed on the remote host. Install the codex CLI or choose Shell/Claude.",
             WorkspaceAgentAction.StartCodex.availability(capabilities).disabledReason,
         )
         assertEquals(
-            "Codex is not installed on the remote host.",
+            "Codex is not installed on the remote host. Install the codex CLI or choose Shell/Claude.",
             WorkspaceAgentAction.ResumeCodexLatest.availability(capabilities).disabledReason,
         )
         assertTrue(WorkspaceAgentAction.StartClaude.availability(capabilities).enabled)

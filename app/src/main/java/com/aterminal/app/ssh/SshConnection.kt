@@ -1,6 +1,7 @@
 package com.aterminal.app.ssh
 
 import com.aterminal.app.data.HostEntity
+import com.aterminal.app.errors.UserFacingErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +24,7 @@ class SshConnection(
         }.onFailure { error ->
             disconnectAfterFailure()
             mutableState.value = SshConnectionState.Failed(
-                message = error.message ?: error::class.java.simpleName,
+                message = UserFacingErrorMessage.from(error),
                 cause = error,
             )
         }

@@ -2,6 +2,7 @@ package com.aterminal.app.tmux
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aterminal.app.errors.UserFacingErrorMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,7 @@ class TmuxSessionListViewModel(
                     mutableState.update {
                         it.copy(
                             loading = false,
-                            errorMessage = error.message ?: "Failed to list tmux sessions.",
+                            errorMessage = UserFacingErrorMessage.from(error),
                         )
                     }
                 }
@@ -90,7 +91,7 @@ class TmuxSessionListViewModel(
 
     private fun showError(error: Throwable) {
         mutableState.update {
-            it.copy(errorMessage = error.message ?: "tmux action failed.")
+            it.copy(errorMessage = UserFacingErrorMessage.from(error))
         }
     }
 }

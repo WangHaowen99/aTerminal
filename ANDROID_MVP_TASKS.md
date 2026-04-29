@@ -272,12 +272,12 @@ Acceptance criteria:
 
 ### Milestone 14: MVP Hardening
 
-- [ ] Add user-facing error messages for SSH auth failure, host key mismatch, missing tmux, missing Codex, missing Claude, and failed tmux command.
-- [ ] Add settings for Codex default flags and Claude default flags.
-- [ ] Add export/import for non-secret host and workspace metadata.
-- [ ] Add privacy note explaining that terminal content stays on device and remote host unless user exports logs.
-- [ ] Run unit tests and UI smoke tests.
-- [ ] Commit with `chore(mvp): harden android agent terminal flows`.
+- [x] Add user-facing error messages for SSH auth failure, host key mismatch, missing tmux, missing Codex, missing Claude, and failed tmux command.
+- [x] Add settings for Codex default flags and Claude default flags.
+- [x] Add export/import for non-secret host and workspace metadata.
+- [x] Add privacy note explaining that terminal content stays on device and remote host unless user exports logs.
+- [x] Run unit tests and UI smoke tests.
+- [x] Commit with `chore(mvp): harden android agent terminal flows`.
 
 Acceptance criteria:
 

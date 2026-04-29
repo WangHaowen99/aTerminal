@@ -1,8 +1,10 @@
 package com.aterminal.app.ssh
 
+import com.aterminal.app.errors.SshAuthenticationFailedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.userauth.UserAuthException
 import net.schmizz.sshj.userauth.keyprovider.OpenSSHKeyFile
 import net.schmizz.sshj.userauth.password.PasswordUtils
 import java.io.StringReader
@@ -20,14 +22,18 @@ class SshjTransport(
 
     override suspend fun authenticate(username: String, credential: SshAuthCredential) {
         withContext(Dispatchers.IO) {
-            when (credential) {
-                is SshAuthCredential.Password -> {
-                    client.authPassword(username, credential.password)
-                }
+            try {
+                when (credential) {
+                    is SshAuthCredential.Password -> {
+                        client.authPassword(username, credential.password)
+                    }
 
-                is SshAuthCredential.PrivateKey -> {
-                    client.authPublickey(username, keyProviderFromPem(credential))
+                    is SshAuthCredential.PrivateKey -> {
+                        client.authPublickey(username, keyProviderFromPem(credential))
+                    }
                 }
+            } catch (error: UserAuthException) {
+                throw SshAuthenticationFailedException(error)
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.aterminal.app.tmux
 
+import com.aterminal.app.errors.TmuxCommandFailedException
 import com.aterminal.app.ssh.SshControlChannel
 
 class TmuxRepository(
@@ -30,8 +31,12 @@ class TmuxRepository(
     }
 
     private fun com.aterminal.app.ssh.SshCommandResult.requireSuccess() {
-        check(exitStatus == 0) {
-            "tmux command failed with exit status $exitStatus: $stderr"
+        if (exitStatus != 0) {
+            throw TmuxCommandFailedException(
+                command = command,
+                exitStatus = exitStatus,
+                stderr = stderr,
+            )
         }
     }
 }

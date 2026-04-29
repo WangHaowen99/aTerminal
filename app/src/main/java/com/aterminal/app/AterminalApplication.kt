@@ -1,5 +1,34 @@
 package com.aterminal.app
 
 import android.app.Application
+import android.content.Context
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.Room
+import com.aterminal.app.data.AppDatabase
+import com.aterminal.app.metadata.MetadataTransferRepository
+import com.aterminal.app.settings.AgentSettingsRepository
 
-class AterminalApplication : Application()
+private val Context.agentSettingsDataStore by preferencesDataStore(
+    name = "agent_settings",
+)
+
+class AterminalApplication : Application() {
+    val database: AppDatabase by lazy {
+        Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java,
+            "aterminal.db",
+        ).build()
+    }
+
+    val agentSettingsRepository: AgentSettingsRepository by lazy {
+        AgentSettingsRepository(agentSettingsDataStore)
+    }
+
+    val metadataTransferRepository: MetadataTransferRepository by lazy {
+        MetadataTransferRepository(
+            hostDao = database.hostDao(),
+            workspaceDao = database.workspaceDao(),
+        )
+    }
+}

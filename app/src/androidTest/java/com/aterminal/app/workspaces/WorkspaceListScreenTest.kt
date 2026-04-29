@@ -85,7 +85,9 @@ class WorkspaceListScreenTest {
         }
 
         composeRule.onNodeWithText("Start Codex").assertIsNotEnabled()
-        composeRule.onNodeWithText("Codex is not installed on the remote host.")
+        composeRule.onNodeWithText(
+            "Codex is not installed on the remote host. Install the codex CLI or choose Shell/Claude.",
+        )
             .assertIsDisplayed()
         composeRule.onNodeWithText("Start Claude").assertIsDisplayed()
     }
@@ -102,7 +104,7 @@ class WorkspaceListScreenTest {
 
         composeRule.onNodeWithText("Shell").assertIsNotEnabled()
         composeRule.onNodeWithText(
-            "Install tmux on the remote host before launching persistent agent sessions.",
+            "tmux is not installed on the remote host. Install tmux before launching persistent agent sessions.",
         ).assertIsDisplayed()
     }
 

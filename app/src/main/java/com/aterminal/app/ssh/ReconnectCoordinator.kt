@@ -1,6 +1,7 @@
 package com.aterminal.app.ssh
 
 import com.aterminal.app.data.HostEntity
+import com.aterminal.app.errors.UserFacingErrorMessage
 import com.aterminal.app.tmux.TmuxRepository
 import com.aterminal.app.tmux.TmuxSession
 import com.aterminal.app.tmux.TmuxSessionManager
@@ -33,7 +34,7 @@ class ReconnectCoordinator(
             restoreLastSession(host)
         }.onFailure { error ->
             mutableState.value = ReconnectUiState.Failed(
-                message = error.message ?: error::class.java.simpleName,
+                message = UserFacingErrorMessage.from(error),
             )
         }
     }

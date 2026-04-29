@@ -21,6 +21,9 @@ interface WorkspaceDao {
     @Query("SELECT * FROM workspaces WHERE id = :id")
     suspend fun getById(id: Long): WorkspaceEntity?
 
+    @Query("SELECT * FROM workspaces ORDER BY name COLLATE NOCASE ASC")
+    suspend fun getAllSnapshot(): List<WorkspaceEntity>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(workspace: WorkspaceEntity): Long
 

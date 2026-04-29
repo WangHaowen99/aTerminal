@@ -15,6 +15,9 @@ interface HostDao {
     @Query("SELECT * FROM hosts WHERE id = :id")
     suspend fun getById(id: Long): HostEntity?
 
+    @Query("SELECT * FROM hosts ORDER BY display_name COLLATE NOCASE ASC")
+    suspend fun getAllSnapshot(): List<HostEntity>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(host: HostEntity): Long
 

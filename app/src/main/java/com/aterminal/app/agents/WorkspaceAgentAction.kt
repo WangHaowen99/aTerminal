@@ -1,6 +1,9 @@
 package com.aterminal.app.agents
 
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.errors.MissingRemoteToolException
+import com.aterminal.app.errors.RemoteTool
+import com.aterminal.app.errors.UserFacingErrorMessage
 import com.aterminal.app.hosts.RemoteCapabilities
 import com.aterminal.app.tmux.TmuxSessionName
 
@@ -81,8 +84,7 @@ sealed class WorkspaceAgentAction(
         }
         if (!capabilities.tmux.available) {
             return WorkspaceAgentActionAvailability.Disabled(
-                capabilities.tmuxInstallGuidance
-                    ?: "tmux is not installed on the remote host.",
+                UserFacingErrorMessage.from(MissingRemoteToolException(RemoteTool.TMUX)),
             )
         }
 
@@ -96,7 +98,7 @@ sealed class WorkspaceAgentAction(
         }
 
         return WorkspaceAgentActionAvailability.Disabled(
-            "${agentType.displayName} is not installed on the remote host.",
+            UserFacingErrorMessage.missingAgent(agentType),
         )
     }
 

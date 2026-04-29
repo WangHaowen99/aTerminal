@@ -2,6 +2,7 @@ package com.aterminal.app.agents
 
 import com.aterminal.app.data.AgentSessionEntity
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.errors.TmuxCommandFailedException
 import com.aterminal.app.ssh.SshControlChannel
 import com.aterminal.app.tmux.TmuxSessionManager
 
@@ -61,8 +62,12 @@ class SshAgentLaunchExecutor(
 ) : AgentLaunchExecutor {
     override suspend fun executeLaunchCommand(command: String) {
         val result = controlChannel.execute(command)
-        check(result.exitStatus == 0) {
-            "agent launch command failed with exit status ${result.exitStatus}: ${result.stderr}"
+        if (result.exitStatus != 0) {
+            throw TmuxCommandFailedException(
+                command = command,
+                exitStatus = result.exitStatus,
+                stderr = result.stderr,
+            )
         }
     }
 }
