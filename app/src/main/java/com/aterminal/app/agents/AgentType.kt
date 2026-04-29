@@ -1,7 +1,9 @@
 package com.aterminal.app.agents
 
-enum class AgentType {
-    CODEX,
-    CLAUDE,
-    SHELL,
+enum class AgentType(
+    val remoteName: String,
+) {
+    CODEX("codex"),
+    CLAUDE("claude"),
+    SHELL("shell"),
 }
