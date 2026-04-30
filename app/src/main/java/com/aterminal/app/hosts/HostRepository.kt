@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 class HostRepository(
     private val hostDao: HostDao,
-) {
-    fun observeHosts(): Flow<List<HostEntity>> {
+) : HostStore {
+    override fun observeHosts(): Flow<List<HostEntity>> {
         return hostDao.observeAll()
     }
 
@@ -15,7 +15,7 @@ class HostRepository(
         return hostDao.getById(id)
     }
 
-    suspend fun create(host: HostEntity): Long {
+    override suspend fun create(host: HostEntity): Long {
         return hostDao.insert(host)
     }
 
@@ -23,7 +23,15 @@ class HostRepository(
         hostDao.update(host)
     }
 
-    suspend fun delete(id: Long) {
+    override suspend fun delete(id: Long) {
         hostDao.deleteById(id)
     }
+}
+
+interface HostStore {
+    fun observeHosts(): Flow<List<HostEntity>>
+
+    suspend fun create(host: HostEntity): Long
+
+    suspend fun delete(id: Long)
 }

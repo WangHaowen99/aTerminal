@@ -15,7 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.aterminal.app.hosts.HostListScreen
+import com.aterminal.app.hosts.HostRoute
 import com.aterminal.app.settings.SettingsRoute
 import com.aterminal.app.terminal.TerminalScreen
 import com.aterminal.app.theme.ATerminalTheme
@@ -61,7 +61,7 @@ fun AterminalApp() {
                 startDestination = AppRoute.Hosts.route,
                 modifier = Modifier.padding(innerPadding),
             ) {
-                composable(AppRoute.Hosts.route) { HostListScreen() }
+                composable(AppRoute.Hosts.route) { HostRoute() }
                 composable(AppRoute.Workspaces.route) { WorkspaceListScreen() }
                 composable(AppRoute.Sessions.route) { TmuxSessionListScreen() }
                 composable(AppRoute.Terminal.route) { TerminalScreen() }

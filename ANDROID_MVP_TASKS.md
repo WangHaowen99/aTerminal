@@ -285,6 +285,21 @@ Acceptance criteria:
 - Users can customize agent launch flags.
 - No secret material is included in exported metadata.
 
+### Milestone 15: Host Management UI
+
+- [x] Add a Host list route backed by the local Room host repository.
+- [x] Add an Add Host dialog for non-secret SSH host metadata.
+- [x] Validate display name, hostname, username, and SSH port before saving.
+- [x] Render saved hosts with auth method, connection target, Connect, and Delete actions.
+- [x] Add ViewModel unit tests and Compose UI smoke tests.
+- [x] Commit with `feat(hosts): add host management UI`.
+
+Acceptance criteria:
+
+- User can save SSH host metadata from the Hosts tab.
+- Saved hosts are listed on the default screen.
+- Invalid host input shows an actionable validation message.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.
