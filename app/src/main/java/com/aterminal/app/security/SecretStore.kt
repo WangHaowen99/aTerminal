@@ -1,6 +1,7 @@
 package com.aterminal.app.security
 
 import android.content.Context
+import com.aterminal.app.data.AuthType
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
@@ -8,37 +9,109 @@ class SecretStore(
     context: Context,
     private val cipher: SecretCipher = AndroidKeystoreSecretCipher(),
     private val preferencesName: String = PREFERENCES_NAME,
-) {
+) : HostCredentialStore {
     private val preferences = context.applicationContext.getSharedPreferences(
         preferencesName,
         Context.MODE_PRIVATE,
     )
 
     suspend fun savePrivateKey(hostId: Long, privateKeyPem: String) {
-        val encrypted = cipher.encrypt(privateKeyPem.toByteArray(StandardCharsets.UTF_8))
-        val committed = preferences.edit()
-            .putString(privateKeyPreferenceKey(hostId), encode(encrypted))
-            .commit()
-        check(committed) { "Failed to persist private key secret." }
+        saveSecret(privateKeyPreferenceKey(hostId), privateKeyPem)
     }
 
     suspend fun getPrivateKey(hostId: Long): String? {
-        val encoded = preferences.getString(privateKeyPreferenceKey(hostId), null)
-            ?: return null
+        return getSecret(privateKeyPreferenceKey(hostId))
+    }
+
+    suspend fun deletePrivateKey(hostId: Long) {
+        deleteSecrets(
+            privateKeyPreferenceKey(hostId),
+            privateKeyPassphrasePreferenceKey(hostId),
+        )
+    }
+
+    override suspend fun saveCredential(
+        hostId: Long,
+        credential: HostCredentialSecret,
+    ) {
+        when (credential) {
+            is HostCredentialSecret.Password -> {
+                saveSecret(passwordPreferenceKey(hostId), credential.password)
+                deleteSecrets(
+                    privateKeyPreferenceKey(hostId),
+                    privateKeyPassphrasePreferenceKey(hostId),
+                )
+            }
+
+            is HostCredentialSecret.PrivateKey -> {
+                saveSecret(privateKeyPreferenceKey(hostId), credential.privateKeyPem)
+                credential.passphrase?.let {
+                    saveSecret(privateKeyPassphrasePreferenceKey(hostId), it)
+                } ?: deleteSecrets(privateKeyPassphrasePreferenceKey(hostId))
+                deleteSecrets(passwordPreferenceKey(hostId))
+            }
+        }
+    }
+
+    override suspend fun getCredential(
+        hostId: Long,
+        authType: AuthType,
+    ): HostCredentialSecret? {
+        return when (authType) {
+            AuthType.PASSWORD -> getSecret(passwordPreferenceKey(hostId))
+                ?.let(HostCredentialSecret::Password)
+
+            AuthType.PRIVATE_KEY -> getPrivateKey(hostId)?.let { privateKey ->
+                HostCredentialSecret.PrivateKey(
+                    privateKeyPem = privateKey,
+                    passphrase = getSecret(privateKeyPassphrasePreferenceKey(hostId)),
+                )
+            }
+        }
+    }
+
+    override suspend fun deleteCredential(hostId: Long) {
+        deleteSecrets(
+            passwordPreferenceKey(hostId),
+            privateKeyPreferenceKey(hostId),
+            privateKeyPassphrasePreferenceKey(hostId),
+        )
+    }
+
+    private fun saveSecret(key: String, value: String) {
+        val encrypted = cipher.encrypt(value.toByteArray(StandardCharsets.UTF_8))
+        val committed = preferences.edit()
+            .putString(key, encode(encrypted))
+            .commit()
+        check(committed) { "Failed to persist host secret." }
+    }
+
+    private fun getSecret(key: String): String? {
+        val encoded = preferences.getString(key, null) ?: return null
         val decrypted = cipher.decrypt(decode(encoded))
         return String(decrypted, StandardCharsets.UTF_8)
     }
 
-    suspend fun deletePrivateKey(hostId: Long) {
+    private fun deleteSecrets(vararg keys: String) {
         val committed = preferences.edit()
-            .remove(privateKeyPreferenceKey(hostId))
+            .apply { keys.forEach(::remove) }
             .commit()
-        check(committed) { "Failed to delete private key secret." }
+        check(committed) { "Failed to delete host secret." }
+    }
+
+    private fun passwordPreferenceKey(hostId: Long): String {
+        require(hostId > 0) { "Host id must be persisted before storing secrets." }
+        return "host.$hostId.password"
     }
 
     private fun privateKeyPreferenceKey(hostId: Long): String {
         require(hostId > 0) { "Host id must be persisted before storing secrets." }
         return "host.$hostId.private_key"
+    }
+
+    private fun privateKeyPassphrasePreferenceKey(hostId: Long): String {
+        require(hostId > 0) { "Host id must be persisted before storing secrets." }
+        return "host.$hostId.private_key_passphrase"
     }
 
     private fun encode(secret: EncryptedSecret): String {

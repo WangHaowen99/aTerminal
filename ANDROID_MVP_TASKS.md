@@ -300,6 +300,21 @@ Acceptance criteria:
 - Saved hosts are listed on the default screen.
 - Invalid host input shows an actionable validation message.
 
+### Milestone 16: Host Credential Capture
+
+- [x] Add password and private-key fields to the Add Host dialog.
+- [x] Save host credentials through Android Keystore-backed `SecretStore`.
+- [x] Store private-key passphrases separately from Room metadata.
+- [x] Delete stored credentials when a host is deleted.
+- [x] Add unit tests for encrypted password/private-key credential storage.
+- [x] Commit with `feat(security): capture host credentials`.
+
+Acceptance criteria:
+
+- Passwords, private keys, and passphrases are not stored in Room.
+- Adding a host persists the selected auth credential after metadata creation.
+- Deleting a host removes its stored credential material.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.

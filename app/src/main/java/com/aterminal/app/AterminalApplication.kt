@@ -7,6 +7,7 @@ import androidx.room.Room
 import com.aterminal.app.data.AppDatabase
 import com.aterminal.app.hosts.HostRepository
 import com.aterminal.app.metadata.MetadataTransferRepository
+import com.aterminal.app.security.SecretStore
 import com.aterminal.app.settings.AgentSettingsRepository
 
 private val Context.agentSettingsDataStore by preferencesDataStore(
@@ -28,6 +29,10 @@ class AterminalApplication : Application() {
 
     val hostRepository: HostRepository by lazy {
         HostRepository(database.hostDao())
+    }
+
+    val secretStore: SecretStore by lazy {
+        SecretStore(applicationContext)
     }
 
     val metadataTransferRepository: MetadataTransferRepository by lazy {

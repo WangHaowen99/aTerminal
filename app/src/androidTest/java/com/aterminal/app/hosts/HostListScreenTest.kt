@@ -90,6 +90,7 @@ class HostListScreenTest {
         composeRule.onNodeWithText("Port").performTextClearance()
         composeRule.onNodeWithText("Port").performTextInput("2222")
         composeRule.onNodeWithText("Username").performTextInput("agent")
+        composeRule.onNodeWithText("Private key PEM").performTextInput("private-key")
         composeRule.onNodeWithText("Save host").performClick()
 
         assertEquals(
@@ -99,10 +100,31 @@ class HostListScreenTest {
                 portText = "2222",
                 username = "agent",
                 authType = AuthType.PRIVATE_KEY,
+                privateKeyPem = "private-key",
             ),
             latestForm,
         )
         assertEquals(1, saveCount)
+    }
+
+    @Test
+    fun showsCredentialFieldForSelectedAuthType() {
+        composeRule.setContent {
+            HostListScreen(
+                state = HostListUiState(
+                    form = HostFormState(authType = AuthType.PASSWORD),
+                    showAddHostDialog = true,
+                ),
+                onAddHostClick = {},
+                onDismissAddHost = {},
+                onFormChange = {},
+                onSaveHost = {},
+                onDeleteHost = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Password").assertIsDisplayed()
+        composeRule.onNodeWithText("SSH password").assertIsDisplayed()
     }
 
     private fun host() = HostEntity(

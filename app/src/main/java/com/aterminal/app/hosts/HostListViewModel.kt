@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.aterminal.app.data.AuthType
 import com.aterminal.app.data.HostEntity
 import com.aterminal.app.errors.UserFacingErrorMessage
+import com.aterminal.app.security.HostCredentialSecret
+import com.aterminal.app.security.HostCredentialStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 
 class HostListViewModel(
     private val hostStore: HostStore,
+    private val credentialStore: HostCredentialStore,
     private val scope: CoroutineScope? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) : ViewModel() {
@@ -61,7 +64,13 @@ class HostListViewModel(
     }
 
     fun saveHost() {
-        val host = runCatching { mutableState.value.form.toEntity(clock()) }
+        val form = mutableState.value.form
+        val hostAndCredential = runCatching {
+            HostAndCredential(
+                host = form.toEntity(clock()),
+                credential = form.toCredential(),
+            )
+        }
             .onFailure { error ->
                 mutableState.update {
                     it.copy(errorMessage = UserFacingErrorMessage.from(error))
@@ -71,7 +80,17 @@ class HostListViewModel(
             ?: return
 
         modelScope.launch {
-            runCatching { hostStore.create(host) }
+            runCatching {
+                val hostId = hostStore.create(hostAndCredential.host)
+                runCatching {
+                    credentialStore.saveCredential(
+                        hostId = hostId,
+                        credential = hostAndCredential.credential,
+                    )
+                }.onFailure {
+                    hostStore.delete(hostId)
+                }.getOrThrow()
+            }
                 .onSuccess { dismissAddHostDialog() }
                 .onFailure { error ->
                     mutableState.update {
@@ -83,7 +102,10 @@ class HostListViewModel(
 
     fun deleteHost(id: Long) {
         modelScope.launch {
-            runCatching { hostStore.delete(id) }
+            runCatching {
+                hostStore.delete(id)
+                credentialStore.deleteCredential(id)
+            }
                 .onFailure { error ->
                     mutableState.update {
                         it.copy(errorMessage = UserFacingErrorMessage.from(error))
@@ -94,14 +116,23 @@ class HostListViewModel(
 
     class Factory(
         private val hostStore: HostStore,
+        private val credentialStore: HostCredentialStore,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(HostListViewModel::class.java))
-            return HostListViewModel(hostStore = hostStore) as T
+            return HostListViewModel(
+                hostStore = hostStore,
+                credentialStore = credentialStore,
+            ) as T
         }
     }
 }
+
+private data class HostAndCredential(
+    val host: HostEntity,
+    val credential: HostCredentialSecret,
+)
 
 data class HostListUiState(
     val hosts: List<HostEntity> = emptyList(),
@@ -116,6 +147,9 @@ data class HostFormState(
     val portText: String = "22",
     val username: String = "",
     val authType: AuthType = AuthType.PRIVATE_KEY,
+    val password: String = "",
+    val privateKeyPem: String = "",
+    val privateKeyPassphrase: String = "",
 ) {
     fun toEntity(nowEpochMillis: Long): HostEntity {
         val port = portText.toIntOrNull()
@@ -146,6 +180,27 @@ data class HostFormState(
             createdAtEpochMillis = nowEpochMillis,
             updatedAtEpochMillis = nowEpochMillis,
         )
+    }
+
+    fun toCredential(): HostCredentialSecret {
+        return when (authType) {
+            AuthType.PASSWORD -> {
+                require(password.isNotBlank()) {
+                    "Password is required."
+                }
+                HostCredentialSecret.Password(password)
+            }
+
+            AuthType.PRIVATE_KEY -> {
+                require(privateKeyPem.isNotBlank()) {
+                    "Private key is required."
+                }
+                HostCredentialSecret.PrivateKey(
+                    privateKeyPem = privateKeyPem,
+                    passphrase = privateKeyPassphrase.takeIf { it.isNotBlank() },
+                )
+            }
+        }
     }
 
     private companion object {

@@ -36,6 +36,7 @@ fun HostRoute() {
     val viewModel: HostListViewModel = viewModel(
         factory = HostListViewModel.Factory(
             hostStore = application.hostRepository,
+            credentialStore = application.secretStore,
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -243,6 +244,36 @@ private fun AddHostDialog(
                                 Text(authType.displayLabel)
                             }
                         }
+                    }
+                }
+                when (form.authType) {
+                    AuthType.PASSWORD -> {
+                        OutlinedTextField(
+                            value = form.password,
+                            onValueChange = { onFormChange(form.copy(password = it)) },
+                            label = { Text("SSH password") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    AuthType.PRIVATE_KEY -> {
+                        OutlinedTextField(
+                            value = form.privateKeyPem,
+                            onValueChange = { onFormChange(form.copy(privateKeyPem = it)) },
+                            label = { Text("Private key PEM") },
+                            minLines = 4,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = form.privateKeyPassphrase,
+                            onValueChange = {
+                                onFormChange(form.copy(privateKeyPassphrase = it))
+                            },
+                            label = { Text("Private key passphrase") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
                 errorMessage?.let { message ->

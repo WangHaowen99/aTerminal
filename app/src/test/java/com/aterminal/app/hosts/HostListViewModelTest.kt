@@ -2,6 +2,8 @@ package com.aterminal.app.hosts
 
 import com.aterminal.app.data.AuthType
 import com.aterminal.app.data.HostEntity
+import com.aterminal.app.security.HostCredentialSecret
+import com.aterminal.app.security.HostCredentialStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -21,6 +23,7 @@ class HostListViewModelTest {
         val store = FakeHostStore()
         val viewModel = HostListViewModel(
             hostStore = store,
+            credentialStore = FakeHostCredentialStore(),
             scope = TestScope(dispatcher),
         )
 
@@ -34,8 +37,10 @@ class HostListViewModelTest {
     fun savesHostMetadataFromFormAndClosesDialog() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val store = FakeHostStore()
+        val credentialStore = FakeHostCredentialStore()
         val viewModel = HostListViewModel(
             hostStore = store,
+            credentialStore = credentialStore,
             scope = TestScope(dispatcher),
             clock = { 1_234L },
         )
@@ -48,6 +53,8 @@ class HostListViewModelTest {
                 portText = "2222",
                 username = "agent",
                 authType = AuthType.PRIVATE_KEY,
+                privateKeyPem = "private-key",
+                privateKeyPassphrase = "passphrase",
             ),
         )
         viewModel.saveHost()
@@ -67,16 +74,81 @@ class HostListViewModelTest {
             ),
             store.createdHosts,
         )
+        assertEquals(
+            listOf(
+                "1:PrivateKey(privateKeyPem=private-key, passphrase=passphrase)",
+            ),
+            credentialStore.savedCredentials,
+        )
         assertFalse(viewModel.state.value.showAddHostDialog)
         assertEquals(HostFormState(), viewModel.state.value.form)
+    }
+
+    @Test
+    fun savesPasswordCredentialForPasswordAuthHosts() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val store = FakeHostStore()
+        val credentialStore = FakeHostCredentialStore()
+        val viewModel = HostListViewModel(
+            hostStore = store,
+            credentialStore = credentialStore,
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.updateForm(
+            HostFormState(
+                displayName = "Dev Box",
+                hostname = "dev.example.com",
+                portText = "22",
+                username = "agent",
+                authType = AuthType.PASSWORD,
+                password = "ssh-password",
+            ),
+        )
+        viewModel.saveHost()
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("1:Password(password=ssh-password)"),
+            credentialStore.savedCredentials,
+        )
+    }
+
+    @Test
+    fun missingCredentialShowsValidationErrorWithoutCreatingHost() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val store = FakeHostStore()
+        val viewModel = HostListViewModel(
+            hostStore = store,
+            credentialStore = FakeHostCredentialStore(),
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.updateForm(
+            HostFormState(
+                displayName = "Dev Box",
+                hostname = "dev.example.com",
+                portText = "22",
+                username = "agent",
+                authType = AuthType.PRIVATE_KEY,
+                privateKeyPem = "",
+            ),
+        )
+        viewModel.saveHost()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<HostEntity>(), store.createdHosts)
+        assertEquals("Private key is required.", viewModel.state.value.errorMessage)
     }
 
     @Test
     fun invalidPortShowsValidationErrorWithoutCreatingHost() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val store = FakeHostStore()
+        val credentialStore = FakeHostCredentialStore()
         val viewModel = HostListViewModel(
             hostStore = store,
+            credentialStore = credentialStore,
             scope = TestScope(dispatcher),
         )
 
@@ -100,8 +172,10 @@ class HostListViewModelTest {
     fun deletesHostById() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val store = FakeHostStore()
+        val credentialStore = FakeHostCredentialStore()
         val viewModel = HostListViewModel(
             hostStore = store,
+            credentialStore = credentialStore,
             scope = TestScope(dispatcher),
         )
 
@@ -109,6 +183,7 @@ class HostListViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(42L), store.deletedHostIds)
+        assertEquals(listOf(42L), credentialStore.deletedHostIds)
     }
 
     private class FakeHostStore : HostStore {
@@ -129,6 +204,27 @@ class HostListViewModelTest {
 
         fun emit(value: List<HostEntity>) {
             hosts.value = value
+        }
+    }
+
+    private class FakeHostCredentialStore : HostCredentialStore {
+        val savedCredentials = mutableListOf<String>()
+        val deletedHostIds = mutableListOf<Long>()
+
+        override suspend fun saveCredential(
+            hostId: Long,
+            credential: HostCredentialSecret,
+        ) {
+            savedCredentials += "$hostId:$credential"
+        }
+
+        override suspend fun getCredential(
+            hostId: Long,
+            authType: AuthType,
+        ): HostCredentialSecret? = null
+
+        override suspend fun deleteCredential(hostId: Long) {
+            deletedHostIds += hostId
         }
     }
 
