@@ -8,6 +8,7 @@ import com.aterminal.app.data.HostEntity
 import com.aterminal.app.errors.UserFacingErrorMessage
 import com.aterminal.app.security.HostCredentialSecret
 import com.aterminal.app.security.HostCredentialStore
+import com.aterminal.app.ssh.SshAuthCredential
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class HostListViewModel(
     private val hostStore: HostStore,
     private val credentialStore: HostCredentialStore,
+    private val hostConnector: HostConnector = NoopHostConnector,
     private val scope: CoroutineScope? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) : ViewModel() {
@@ -114,9 +116,62 @@ class HostListViewModel(
         }
     }
 
+    fun connectHost(host: HostEntity) {
+        modelScope.launch {
+            mutableState.update {
+                it.copy(
+                    connectingHostId = host.id,
+                    statusMessage = "Connecting to ${host.displayName}...",
+                    errorMessage = null,
+                )
+            }
+
+            val credential = credentialStore.getCredential(
+                hostId = host.id,
+                authType = host.authType,
+            )
+            if (credential == null) {
+                mutableState.update {
+                    it.copy(
+                        connectingHostId = null,
+                        errorMessage = "No saved credential for ${host.displayName}. Re-add the host credential before connecting.",
+                    )
+                }
+                return@launch
+            }
+
+            runCatching {
+                hostConnector.connect(
+                    host = host,
+                    credential = credential.toSshAuthCredential(),
+                )
+            }
+                .onSuccess {
+                    mutableState.update {
+                        it.copy(
+                            connectingHostId = null,
+                            connectedHostId = host.id,
+                            statusMessage = "Connected to ${host.displayName}.",
+                            errorMessage = null,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    mutableState.update {
+                        it.copy(
+                            connectingHostId = null,
+                            connectedHostId = null,
+                            errorMessage = UserFacingErrorMessage.from(error),
+                        )
+                    }
+                }
+        }
+    }
+
     class Factory(
         private val hostStore: HostStore,
         private val credentialStore: HostCredentialStore,
+        private val hostConnector: HostConnector,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -124,9 +179,17 @@ class HostListViewModel(
             return HostListViewModel(
                 hostStore = hostStore,
                 credentialStore = credentialStore,
+                hostConnector = hostConnector,
             ) as T
         }
     }
+}
+
+private object NoopHostConnector : HostConnector {
+    override suspend fun connect(
+        host: HostEntity,
+        credential: SshAuthCredential,
+    ) = Unit
 }
 
 private data class HostAndCredential(
@@ -138,6 +201,9 @@ data class HostListUiState(
     val hosts: List<HostEntity> = emptyList(),
     val form: HostFormState = HostFormState(),
     val showAddHostDialog: Boolean = false,
+    val connectingHostId: Long? = null,
+    val connectedHostId: Long? = null,
+    val statusMessage: String? = null,
     val errorMessage: String? = null,
 )
 
@@ -206,5 +272,15 @@ data class HostFormState(
     private companion object {
         const val MIN_PORT = 1
         const val MAX_PORT = 65_535
+    }
+}
+
+private fun HostCredentialSecret.toSshAuthCredential(): SshAuthCredential {
+    return when (this) {
+        is HostCredentialSecret.Password -> SshAuthCredential.Password(password)
+        is HostCredentialSecret.PrivateKey -> SshAuthCredential.PrivateKey(
+            privateKeyPem = privateKeyPem,
+            passphrase = passphrase,
+        )
     }
 }

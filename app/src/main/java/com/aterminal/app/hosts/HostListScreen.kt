@@ -37,6 +37,7 @@ fun HostRoute() {
         factory = HostListViewModel.Factory(
             hostStore = application.hostRepository,
             credentialStore = application.secretStore,
+            hostConnector = application.hostConnector,
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -48,6 +49,7 @@ fun HostRoute() {
         onFormChange = viewModel::updateForm,
         onSaveHost = viewModel::saveHost,
         onDeleteHost = viewModel::deleteHost,
+        onConnectHost = viewModel::connectHost,
     )
 }
 
@@ -59,6 +61,7 @@ fun HostListScreen(
     onFormChange: (HostFormState) -> Unit,
     onSaveHost: () -> Unit,
     onDeleteHost: (Long) -> Unit,
+    onConnectHost: (HostEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -71,6 +74,15 @@ fun HostListScreen(
         ) {
             item {
                 HostListHeader(onAddHostClick = onAddHostClick)
+            }
+            state.statusMessage?.let { message ->
+                item {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
             state.errorMessage?.let { message ->
                 item {
@@ -97,6 +109,9 @@ fun HostListScreen(
                     HostCard(
                         host = host,
                         onDeleteHost = onDeleteHost,
+                        onConnectHost = onConnectHost,
+                        connecting = state.connectingHostId == host.id,
+                        connected = state.connectedHostId == host.id,
                     )
                 }
             }
@@ -148,6 +163,9 @@ private fun HostListHeader(
 private fun HostCard(
     host: HostEntity,
     onDeleteHost: (Long) -> Unit,
+    onConnectHost: (HostEntity) -> Unit,
+    connecting: Boolean,
+    connected: Boolean,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -174,12 +192,22 @@ private fun HostCard(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(onClick = {}) {
-                    Text("Connect")
+                Button(
+                    enabled = !connecting,
+                    onClick = { onConnectHost(host) },
+                ) {
+                    Text(if (connecting) "Connecting" else "Connect")
                 }
                 OutlinedButton(onClick = { onDeleteHost(host.id) }) {
                     Text("Delete")
                 }
+            }
+            if (connected) {
+                Text(
+                    text = "Connected",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }

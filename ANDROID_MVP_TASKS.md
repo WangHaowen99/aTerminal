@@ -315,6 +315,21 @@ Acceptance criteria:
 - Adding a host persists the selected auth credential after metadata creation.
 - Deleting a host removes its stored credential material.
 
+### Milestone 17: Host Connect Action
+
+- [x] Wire the Host list Connect action to stored credentials.
+- [x] Map saved password/private-key secrets into `SshAuthCredential`.
+- [x] Add an injectable `HostConnector` backed by `SshConnection`.
+- [x] Show connecting, connected, missing credential, and connection failure states.
+- [x] Add ViewModel and Compose smoke tests for connect actions.
+- [x] Commit with `feat(ssh): connect saved hosts`.
+
+Acceptance criteria:
+
+- Pressing Connect retrieves the saved host credential.
+- Missing credentials block connection with a clear message.
+- SSH connection failures are shown as user-facing errors.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.

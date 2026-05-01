@@ -4,6 +4,7 @@ import com.aterminal.app.data.AuthType
 import com.aterminal.app.data.HostEntity
 import com.aterminal.app.security.HostCredentialSecret
 import com.aterminal.app.security.HostCredentialStore
+import com.aterminal.app.ssh.SshAuthCredential
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -186,6 +187,114 @@ class HostListViewModelTest {
         assertEquals(listOf(42L), credentialStore.deletedHostIds)
     }
 
+    @Test
+    fun connectHostUsesStoredPrivateKeyCredential() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val credentialStore = FakeHostCredentialStore(
+            credentials = mapOf(
+                7L to HostCredentialSecret.PrivateKey(
+                    privateKeyPem = "private-key",
+                    passphrase = "passphrase",
+                ),
+            ),
+        )
+        val connector = RecordingHostConnector()
+        val viewModel = HostListViewModel(
+            hostStore = FakeHostStore(),
+            credentialStore = credentialStore,
+            hostConnector = connector,
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.connectHost(host(id = 7, displayName = "Dev Box"))
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(
+                "Dev Box:PrivateKey(privateKeyPem=private-key, passphrase=passphrase)",
+            ),
+            connector.events,
+        )
+        assertEquals(7L, viewModel.state.value.connectedHostId)
+        assertEquals("Connected to Dev Box.", viewModel.state.value.statusMessage)
+    }
+
+    @Test
+    fun connectHostUsesStoredPasswordCredential() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val connector = RecordingHostConnector()
+        val viewModel = HostListViewModel(
+            hostStore = FakeHostStore(),
+            credentialStore = FakeHostCredentialStore(
+                credentials = mapOf(8L to HostCredentialSecret.Password("ssh-password")),
+            ),
+            hostConnector = connector,
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.connectHost(
+            host(
+                id = 8,
+                displayName = "Password Box",
+                authType = AuthType.PASSWORD,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("Password Box:Password(password=ssh-password)"),
+            connector.events,
+        )
+    }
+
+    @Test
+    fun missingCredentialShowsErrorWithoutConnecting() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val connector = RecordingHostConnector()
+        val viewModel = HostListViewModel(
+            hostStore = FakeHostStore(),
+            credentialStore = FakeHostCredentialStore(),
+            hostConnector = connector,
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.connectHost(host(id = 9, displayName = "Missing Secret"))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), connector.events)
+        assertEquals(
+            "No saved credential for Missing Secret. Re-add the host credential before connecting.",
+            viewModel.state.value.errorMessage,
+        )
+    }
+
+    @Test
+    fun connectFailureShowsUserFacingError() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val viewModel = HostListViewModel(
+            hostStore = FakeHostStore(),
+            credentialStore = FakeHostCredentialStore(
+                credentials = mapOf(10L to HostCredentialSecret.Password("ssh-password")),
+            ),
+            hostConnector = RecordingHostConnector(
+                error = IllegalStateException("network down"),
+            ),
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.connectHost(
+            host(
+                id = 10,
+                displayName = "Flaky Box",
+                authType = AuthType.PASSWORD,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals("network down", viewModel.state.value.errorMessage)
+        assertEquals(null, viewModel.state.value.connectedHostId)
+    }
+
     private class FakeHostStore : HostStore {
         private val hosts = MutableStateFlow<List<HostEntity>>(emptyList())
         val createdHosts = mutableListOf<HostEntity>()
@@ -207,7 +316,9 @@ class HostListViewModelTest {
         }
     }
 
-    private class FakeHostCredentialStore : HostCredentialStore {
+    private class FakeHostCredentialStore(
+        private val credentials: Map<Long, HostCredentialSecret> = emptyMap(),
+    ) : HostCredentialStore {
         val savedCredentials = mutableListOf<String>()
         val deletedHostIds = mutableListOf<Long>()
 
@@ -221,20 +332,38 @@ class HostListViewModelTest {
         override suspend fun getCredential(
             hostId: Long,
             authType: AuthType,
-        ): HostCredentialSecret? = null
+        ): HostCredentialSecret? = credentials[hostId]
 
         override suspend fun deleteCredential(hostId: Long) {
             deletedHostIds += hostId
         }
     }
 
-    private fun host(id: Long, displayName: String) = HostEntity(
+    private class RecordingHostConnector(
+        private val error: Throwable? = null,
+    ) : HostConnector {
+        val events = mutableListOf<String>()
+
+        override suspend fun connect(
+            host: HostEntity,
+            credential: SshAuthCredential,
+        ) {
+            error?.let { throw it }
+            events += "${host.displayName}:$credential"
+        }
+    }
+
+    private fun host(
+        id: Long,
+        displayName: String,
+        authType: AuthType = AuthType.PRIVATE_KEY,
+    ) = HostEntity(
         id = id,
         displayName = displayName,
         hostname = "dev.example.com",
         port = 22,
         username = "agent",
-        authType = AuthType.PRIVATE_KEY,
+        authType = authType,
         createdAtEpochMillis = 100,
         updatedAtEpochMillis = 100,
     )

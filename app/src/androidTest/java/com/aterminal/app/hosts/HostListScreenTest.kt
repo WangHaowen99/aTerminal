@@ -30,6 +30,7 @@ class HostListScreenTest {
                 onFormChange = {},
                 onSaveHost = {},
                 onDeleteHost = {},
+                onConnectHost = {},
             )
         }
 
@@ -51,6 +52,7 @@ class HostListScreenTest {
                 onFormChange = {},
                 onSaveHost = {},
                 onDeleteHost = {},
+                onConnectHost = {},
             )
         }
 
@@ -59,6 +61,50 @@ class HostListScreenTest {
         composeRule.onNodeWithText("Private key").assertIsDisplayed()
         composeRule.onNodeWithText("Connect").assertIsDisplayed()
         composeRule.onNodeWithText("Delete").assertIsDisplayed()
+    }
+
+    @Test
+    fun sendsConnectActionForSavedHost() {
+        val connectedHostIds = mutableListOf<Long>()
+        composeRule.setContent {
+            HostListScreen(
+                state = HostListUiState(
+                    hosts = listOf(host()),
+                ),
+                onAddHostClick = {},
+                onDismissAddHost = {},
+                onFormChange = {},
+                onSaveHost = {},
+                onDeleteHost = {},
+                onConnectHost = { connectedHostIds += it.id },
+            )
+        }
+
+        composeRule.onNodeWithText("Connect").performClick()
+
+        assertEquals(listOf(7L), connectedHostIds)
+    }
+
+    @Test
+    fun showsConnectionStatus() {
+        composeRule.setContent {
+            HostListScreen(
+                state = HostListUiState(
+                    hosts = listOf(host()),
+                    connectingHostId = 7,
+                    statusMessage = "Connecting to Dev Box...",
+                ),
+                onAddHostClick = {},
+                onDismissAddHost = {},
+                onFormChange = {},
+                onSaveHost = {},
+                onDeleteHost = {},
+                onConnectHost = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Connecting to Dev Box...").assertIsDisplayed()
+        composeRule.onNodeWithText("Connecting").assertIsDisplayed()
     }
 
     @Test
@@ -82,6 +128,7 @@ class HostListScreenTest {
                 },
                 onSaveHost = { saveCount += 1 },
                 onDeleteHost = {},
+                onConnectHost = {},
             )
         }
 
@@ -120,6 +167,7 @@ class HostListScreenTest {
                 onFormChange = {},
                 onSaveHost = {},
                 onDeleteHost = {},
+                onConnectHost = {},
             )
         }
 
