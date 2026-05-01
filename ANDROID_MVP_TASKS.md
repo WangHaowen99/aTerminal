@@ -330,6 +330,21 @@ Acceptance criteria:
 - Missing credentials block connection with a clear message.
 - SSH connection failures are shown as user-facing errors.
 
+### Milestone 18: Host Remote Capability Display
+
+- [x] Return detected `tmux`, `codex`, and `claude` capabilities from a successful host connection.
+- [x] Store detected capabilities per host in the Host list state.
+- [x] Render tmux version, Codex availability, and Claude availability on the connected host card.
+- [x] Show tmux install guidance when the remote host is missing tmux.
+- [x] Add ViewModel and Compose smoke tests for capability display.
+- [x] Commit with `feat(hosts): show remote capabilities after connect`.
+
+Acceptance criteria:
+
+- Pressing Connect runs remote capability detection after SSH authentication succeeds.
+- The connected host card shows whether tmux, Codex, and Claude Code are available.
+- Missing tmux is called out before the user tries a tmux-backed agent action.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.

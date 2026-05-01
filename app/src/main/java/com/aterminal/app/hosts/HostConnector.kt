@@ -10,8 +10,12 @@ interface HostConnector {
     suspend fun connect(
         host: HostEntity,
         credential: SshAuthCredential,
-    )
+    ): HostConnectionResult
 }
+
+data class HostConnectionResult(
+    val capabilities: RemoteCapabilities,
+)
 
 class SshHostConnector(
     private val connectionFactory: () -> SshConnection = {
@@ -21,7 +25,7 @@ class SshHostConnector(
     override suspend fun connect(
         host: HostEntity,
         credential: SshAuthCredential,
-    ) {
+    ): HostConnectionResult {
         val connection = connectionFactory()
         connection.connect(host, credential)
         val state = connection.state.value
@@ -31,5 +35,9 @@ class SshHostConnector(
                 else -> "SSH connection did not reach connected state."
             }
         }
+        val capabilities = RemoteCapabilityDetector(
+            SshRemoteCapabilityChannel(connection.controlChannel()),
+        ).detect()
+        return HostConnectionResult(capabilities)
     }
 }

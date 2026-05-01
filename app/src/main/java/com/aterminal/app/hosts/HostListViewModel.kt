@@ -121,8 +121,10 @@ class HostListViewModel(
             mutableState.update {
                 it.copy(
                     connectingHostId = host.id,
+                    connectedHostId = null,
                     statusMessage = "Connecting to ${host.displayName}...",
                     errorMessage = null,
+                    capabilitiesByHostId = it.capabilitiesByHostId - host.id,
                 )
             }
 
@@ -146,13 +148,16 @@ class HostListViewModel(
                     credential = credential.toSshAuthCredential(),
                 )
             }
-                .onSuccess {
+                .onSuccess { result ->
                     mutableState.update {
                         it.copy(
                             connectingHostId = null,
                             connectedHostId = host.id,
                             statusMessage = "Connected to ${host.displayName}.",
                             errorMessage = null,
+                            capabilitiesByHostId = it.capabilitiesByHostId + (
+                                host.id to result.capabilities
+                            ),
                         )
                     }
                 }
@@ -162,6 +167,7 @@ class HostListViewModel(
                             connectingHostId = null,
                             connectedHostId = null,
                             errorMessage = UserFacingErrorMessage.from(error),
+                            capabilitiesByHostId = it.capabilitiesByHostId - host.id,
                         )
                     }
                 }
@@ -189,7 +195,13 @@ private object NoopHostConnector : HostConnector {
     override suspend fun connect(
         host: HostEntity,
         credential: SshAuthCredential,
-    ) = Unit
+    ) = HostConnectionResult(
+        capabilities = RemoteCapabilities(
+            tmux = RemoteToolCapability(available = true),
+            codex = RemoteToolCapability(available = true),
+            claude = RemoteToolCapability(available = true),
+        ),
+    )
 }
 
 private data class HostAndCredential(
@@ -203,6 +215,7 @@ data class HostListUiState(
     val showAddHostDialog: Boolean = false,
     val connectingHostId: Long? = null,
     val connectedHostId: Long? = null,
+    val capabilitiesByHostId: Map<Long, RemoteCapabilities> = emptyMap(),
     val statusMessage: String? = null,
     val errorMessage: String? = null,
 )

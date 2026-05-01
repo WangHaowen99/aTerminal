@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -112,6 +113,7 @@ fun HostListScreen(
                         onConnectHost = onConnectHost,
                         connecting = state.connectingHostId == host.id,
                         connected = state.connectedHostId == host.id,
+                        capabilities = state.capabilitiesByHostId[host.id],
                     )
                 }
             }
@@ -166,6 +168,7 @@ private fun HostCard(
     onConnectHost: (HostEntity) -> Unit,
     connecting: Boolean,
     connected: Boolean,
+    capabilities: RemoteCapabilities?,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -209,6 +212,41 @@ private fun HostCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            capabilities?.let {
+                RemoteCapabilitiesSummary(capabilities = it)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RemoteCapabilitiesSummary(
+    capabilities: RemoteCapabilities,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = tmuxCapabilityLabel(capabilities.tmux),
+            color = capabilityColor(capabilities.tmux),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = toolCapabilityLabel("Codex", capabilities.codex),
+            color = capabilityColor(capabilities.codex),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = toolCapabilityLabel("Claude", capabilities.claude),
+            color = capabilityColor(capabilities.claude),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        capabilities.tmuxInstallGuidance?.let { guidance ->
+            Text(
+                text = guidance,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }
@@ -331,3 +369,27 @@ private val AuthType.displayLabel: String
         AuthType.PASSWORD -> "Password"
         AuthType.PRIVATE_KEY -> "Private key"
     }
+
+@Composable
+private fun capabilityColor(capability: RemoteToolCapability): Color {
+    return if (capability.available) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.error
+    }
+}
+
+private fun tmuxCapabilityLabel(capability: RemoteToolCapability): String {
+    return if (capability.available) {
+        "tmux: ${capability.version ?: capability.path ?: "available"}"
+    } else {
+        "tmux missing"
+    }
+}
+
+private fun toolCapabilityLabel(
+    toolName: String,
+    capability: RemoteToolCapability,
+): String {
+    return "$toolName ${if (capability.available) "available" else "missing"}"
+}

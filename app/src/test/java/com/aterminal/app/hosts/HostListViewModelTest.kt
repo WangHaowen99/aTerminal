@@ -220,6 +220,35 @@ class HostListViewModelTest {
     }
 
     @Test
+    fun connectHostStoresDetectedRemoteCapabilities() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val capabilities = capabilities(
+            tmux = capability(available = true, path = "/usr/bin/tmux", version = "tmux 3.4"),
+            codex = capability(available = true, path = "/usr/local/bin/codex"),
+            claude = capability(available = false),
+        )
+        val viewModel = HostListViewModel(
+            hostStore = FakeHostStore(),
+            credentialStore = FakeHostCredentialStore(
+                credentials = mapOf(7L to HostCredentialSecret.Password("ssh-password")),
+            ),
+            hostConnector = RecordingHostConnector(capabilities = capabilities),
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.connectHost(
+            host(
+                id = 7,
+                displayName = "Dev Box",
+                authType = AuthType.PASSWORD,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(capabilities, viewModel.state.value.capabilitiesByHostId[7L])
+    }
+
+    @Test
     fun connectHostUsesStoredPasswordCredential() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val connector = RecordingHostConnector()
@@ -293,6 +322,7 @@ class HostListViewModelTest {
 
         assertEquals("network down", viewModel.state.value.errorMessage)
         assertEquals(null, viewModel.state.value.connectedHostId)
+        assertFalse(viewModel.state.value.capabilitiesByHostId.containsKey(10L))
     }
 
     private class FakeHostStore : HostStore {
@@ -341,16 +371,40 @@ class HostListViewModelTest {
 
     private class RecordingHostConnector(
         private val error: Throwable? = null,
+        private val capabilities: RemoteCapabilities = capabilities(),
     ) : HostConnector {
         val events = mutableListOf<String>()
 
         override suspend fun connect(
             host: HostEntity,
             credential: SshAuthCredential,
-        ) {
+        ): HostConnectionResult {
             error?.let { throw it }
             events += "${host.displayName}:$credential"
+            return HostConnectionResult(capabilities)
         }
+    }
+
+    private companion object {
+        fun capabilities(
+            tmux: RemoteToolCapability = capability(),
+            codex: RemoteToolCapability = capability(),
+            claude: RemoteToolCapability = capability(),
+        ) = RemoteCapabilities(
+            tmux = tmux,
+            codex = codex,
+            claude = claude,
+        )
+
+        fun capability(
+            available: Boolean = true,
+            path: String? = null,
+            version: String? = null,
+        ) = RemoteToolCapability(
+            available = available,
+            path = path,
+            version = version,
+        )
     }
 
     private fun host(

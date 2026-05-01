@@ -108,6 +108,71 @@ class HostListScreenTest {
     }
 
     @Test
+    fun showsRemoteCapabilitiesForConnectedHost() {
+        composeRule.setContent {
+            HostListScreen(
+                state = HostListUiState(
+                    hosts = listOf(host()),
+                    connectedHostId = 7,
+                    capabilitiesByHostId = mapOf(
+                        7L to RemoteCapabilities(
+                            tmux = RemoteToolCapability(
+                                available = true,
+                                path = "/usr/bin/tmux",
+                                version = "tmux 3.4",
+                            ),
+                            codex = RemoteToolCapability(
+                                available = true,
+                                path = "/usr/local/bin/codex",
+                            ),
+                            claude = RemoteToolCapability(available = false),
+                        ),
+                    ),
+                ),
+                onAddHostClick = {},
+                onDismissAddHost = {},
+                onFormChange = {},
+                onSaveHost = {},
+                onDeleteHost = {},
+                onConnectHost = {},
+            )
+        }
+
+        composeRule.onNodeWithText("tmux: tmux 3.4").assertIsDisplayed()
+        composeRule.onNodeWithText("Codex available").assertIsDisplayed()
+        composeRule.onNodeWithText("Claude missing").assertIsDisplayed()
+    }
+
+    @Test
+    fun showsTmuxInstallGuidanceWhenCapabilityIsMissing() {
+        composeRule.setContent {
+            HostListScreen(
+                state = HostListUiState(
+                    hosts = listOf(host()),
+                    connectedHostId = 7,
+                    capabilitiesByHostId = mapOf(
+                        7L to RemoteCapabilities(
+                            tmux = RemoteToolCapability(available = false),
+                            codex = RemoteToolCapability(available = true),
+                            claude = RemoteToolCapability(available = true),
+                        ),
+                    ),
+                ),
+                onAddHostClick = {},
+                onDismissAddHost = {},
+                onFormChange = {},
+                onSaveHost = {},
+                onDeleteHost = {},
+                onConnectHost = {},
+            )
+        }
+
+        composeRule.onNodeWithText("tmux missing").assertIsDisplayed()
+        composeRule.onNodeWithText("Install tmux on the remote host before launching persistent agent sessions.")
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun submitsAddHostForm() {
         var saveCount = 0
         lateinit var latestForm: HostFormState
