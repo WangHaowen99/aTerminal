@@ -19,9 +19,15 @@ class TmuxCommandBuilder(
         sessionName: String,
         remoteCwd: String,
         command: String,
+        detached: Boolean = false,
     ): String {
+        val lifecycleFlag = if (detached) {
+            "tmux new-session -Ads"
+        } else {
+            "tmux new-session -As"
+        }
         return listOf(
-            "tmux new-session -As",
+            lifecycleFlag,
             quoter(sessionName),
             "-c",
             quoter(remoteCwd),

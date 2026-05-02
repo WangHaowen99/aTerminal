@@ -17,7 +17,7 @@ class AgentCommandBuilderTest {
 
         assertEquals("codex --no-alt-screen", builder.buildAgentCommand(request))
         assertEquals(
-            "tmux new-session -As 'aterm:codex:a-terminal' -c '/srv/aTerminal mobile' 'codex --no-alt-screen'",
+            "tmux new-session -Ads 'aterm:codex:a-terminal' -c '/srv/aTerminal mobile' 'codex --no-alt-screen'",
             builder.buildLaunchCommand(request),
         )
     }

@@ -24,7 +24,7 @@ import com.aterminal.app.terminal.TerminalScreen
 import com.aterminal.app.terminal.TerminalSessionViewModel
 import com.aterminal.app.theme.ATerminalTheme
 import com.aterminal.app.tmux.TmuxSessionRoute
-import com.aterminal.app.workspaces.WorkspaceListScreen
+import com.aterminal.app.workspaces.WorkspaceRoute
 
 @Composable
 fun AterminalApp() {
@@ -69,7 +69,19 @@ fun AterminalApp() {
                 modifier = Modifier.padding(innerPadding),
             ) {
                 composable(AppRoute.Hosts.route) { HostRoute() }
-                composable(AppRoute.Workspaces.route) { WorkspaceListScreen() }
+                composable(AppRoute.Workspaces.route) {
+                    WorkspaceRoute(
+                        activeSession = activeSession,
+                        workspaceStore = application.workspaceRepository,
+                        sessionStore = application.agentSessionRepository,
+                        terminalSessionSink = terminalViewModel,
+                        onAttachedToTerminal = {
+                            navController.navigate(AppRoute.Terminal.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
                 composable(AppRoute.Sessions.route) {
                     TmuxSessionRoute(
                         activeSession = activeSession,

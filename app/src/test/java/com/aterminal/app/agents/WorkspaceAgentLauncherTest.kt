@@ -2,11 +2,16 @@ package com.aterminal.app.agents
 
 import com.aterminal.app.data.AgentSessionEntity
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.ssh.SshPtyChannel
+import com.aterminal.app.terminal.TerminalSessionSink
 import com.aterminal.app.tmux.TmuxSession
 import com.aterminal.app.tmux.TmuxSessionManager
+import com.aterminal.app.tmux.TmuxTerminalAttacher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 class WorkspaceAgentLauncherTest {
     @Test
@@ -28,7 +33,7 @@ class WorkspaceAgentLauncherTest {
 
         assertEquals(
             listOf(
-                "tmux new-session -As 'aterm:codex:a-terminal' -c '/srv/aTerminal mobile' 'codex --no-alt-screen'",
+                "tmux new-session -Ads 'aterm:codex:a-terminal' -c '/srv/aTerminal mobile' 'codex --no-alt-screen'",
             ),
             executor.commands,
         )
@@ -46,6 +51,30 @@ class WorkspaceAgentLauncherTest {
         )
         assertEquals(91, result.localSessionId)
         assertEquals("aterm:codex:a-terminal", result.tmuxSessionName)
+    }
+
+    @Test
+    fun launchingWorkspaceActionCanAttachToTerminalPty() = runTest {
+        val pty = pty()
+        val terminalAttacher = RecordingTmuxTerminalAttacher(pty)
+        val terminalSink = RecordingTerminalSessionSink()
+        val sessionManager = RecordingTmuxSessionManager()
+        val launcher = WorkspaceAgentLauncher(
+            launchExecutor = RecordingAgentLaunchExecutor(),
+            sessionManager = sessionManager,
+            sessionStore = RecordingAgentSessionStore(savedId = 91),
+            terminalAttacher = terminalAttacher,
+            terminalSessionSink = terminalSink,
+        )
+
+        launcher.launch(
+            workspace = workspace(),
+            action = WorkspaceAgentAction.StartCodex,
+        )
+
+        assertEquals(listOf("aterm:codex:a-terminal"), terminalAttacher.attachedSessionNames)
+        assertEquals(listOf(pty), terminalSink.attachedPtys)
+        assertEquals(emptyList<String>(), sessionManager.attachedSessions)
     }
 
     @Test
@@ -102,6 +131,25 @@ class WorkspaceAgentLauncherTest {
         override suspend fun detachClient() = Unit
     }
 
+    private class RecordingTmuxTerminalAttacher(
+        private val pty: SshPtyChannel,
+    ) : TmuxTerminalAttacher {
+        val attachedSessionNames = mutableListOf<String>()
+
+        override suspend fun attach(sessionName: String): SshPtyChannel {
+            attachedSessionNames += sessionName
+            return pty
+        }
+    }
+
+    private class RecordingTerminalSessionSink : TerminalSessionSink {
+        val attachedPtys = mutableListOf<SshPtyChannel>()
+
+        override fun attach(channel: SshPtyChannel) {
+            attachedPtys += channel
+        }
+    }
+
     private fun workspace() = WorkspaceEntity(
         id = 7,
         hostId = 3,
@@ -111,4 +159,13 @@ class WorkspaceAgentLauncherTest {
         createdAtEpochMillis = 100,
         updatedAtEpochMillis = 100,
     )
+
+    private fun pty(): SshPtyChannel {
+        return SshPtyChannel(
+            input = ByteArrayInputStream(ByteArray(0)),
+            output = ByteArrayOutputStream(),
+            resize = {},
+            close = {},
+        )
+    }
 }

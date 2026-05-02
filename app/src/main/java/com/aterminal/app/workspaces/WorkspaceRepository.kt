@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 class WorkspaceRepository(
     private val workspaceDao: WorkspaceDao,
-) {
-    fun observeForHost(hostId: Long): Flow<List<WorkspaceEntity>> {
+) : WorkspaceStore {
+    override fun observeForHost(hostId: Long): Flow<List<WorkspaceEntity>> {
         return workspaceDao.observeForHost(hostId)
     }
 
@@ -26,4 +26,8 @@ class WorkspaceRepository(
     suspend fun delete(id: Long) {
         workspaceDao.deleteById(id)
     }
+}
+
+interface WorkspaceStore {
+    fun observeForHost(hostId: Long): Flow<List<WorkspaceEntity>>
 }

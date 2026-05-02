@@ -21,15 +21,69 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aterminal.app.agents.AgentSessionStore
+import com.aterminal.app.agents.SshAgentLaunchExecutor
 import com.aterminal.app.agents.WorkspaceAgentAction
 import com.aterminal.app.agents.WorkspaceAgentActionAvailability
+import com.aterminal.app.agents.WorkspaceAgentLauncher
 import com.aterminal.app.data.WorkspaceEntity
+import com.aterminal.app.hosts.ActiveHostSession
 import com.aterminal.app.hosts.RemoteCapabilities
+import com.aterminal.app.terminal.TerminalSessionSink
+import com.aterminal.app.tmux.TmuxPtyAttacher
+import com.aterminal.app.tmux.TmuxRepository
 import com.aterminal.app.ui.EmptyStateScreen
+import kotlinx.coroutines.launch
+
+@Composable
+fun WorkspaceRoute(
+    activeSession: ActiveHostSession?,
+    workspaceStore: WorkspaceStore,
+    sessionStore: AgentSessionStore,
+    terminalSessionSink: TerminalSessionSink?,
+    onAttachedToTerminal: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (activeSession == null) {
+        WorkspaceListScreen(modifier = modifier)
+        return
+    }
+
+    val workspaces by workspaceStore
+        .observeForHost(activeSession.host.id)
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val coroutineScope = rememberCoroutineScope()
+    val launcher = remember(activeSession, sessionStore, terminalSessionSink) {
+        WorkspaceAgentLauncher(
+            launchExecutor = SshAgentLaunchExecutor(activeSession.controlChannel()),
+            sessionManager = TmuxRepository(activeSession.controlChannel()),
+            sessionStore = sessionStore,
+            terminalAttacher = terminalSessionSink?.let { TmuxPtyAttacher(activeSession) },
+            terminalSessionSink = terminalSessionSink,
+        )
+    }
+
+    WorkspaceListScreen(
+        workspaces = workspaces,
+        capabilities = activeSession.capabilities,
+        onActionSelected = { workspace, action ->
+            coroutineScope.launch {
+                launcher.launch(
+                    workspace = workspace,
+                    action = action,
+                )
+                onAttachedToTerminal()
+            }
+        },
+        modifier = modifier,
+    )
+}
 
 @Composable
 fun WorkspaceListScreen(

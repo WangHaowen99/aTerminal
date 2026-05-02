@@ -12,6 +12,7 @@ class AgentCommandBuilder(
             sessionName = request.tmuxSessionName,
             remoteCwd = request.workspaceCwd,
             command = buildAgentCommand(request),
+            detached = true,
         )
     }
 

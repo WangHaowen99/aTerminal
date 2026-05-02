@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
+import com.aterminal.app.agents.AgentSessionRepository
 import com.aterminal.app.data.AppDatabase
 import com.aterminal.app.hosts.ActiveHostSessionStore
 import com.aterminal.app.hosts.HostRepository
@@ -11,6 +12,7 @@ import com.aterminal.app.hosts.SshHostConnector
 import com.aterminal.app.metadata.MetadataTransferRepository
 import com.aterminal.app.security.SecretStore
 import com.aterminal.app.settings.AgentSettingsRepository
+import com.aterminal.app.workspaces.WorkspaceRepository
 
 private val Context.agentSettingsDataStore by preferencesDataStore(
     name = "agent_settings",
@@ -31,6 +33,14 @@ class AterminalApplication : Application() {
 
     val hostRepository: HostRepository by lazy {
         HostRepository(database.hostDao())
+    }
+
+    val workspaceRepository: WorkspaceRepository by lazy {
+        WorkspaceRepository(database.workspaceDao())
+    }
+
+    val agentSessionRepository: AgentSessionRepository by lazy {
+        AgentSessionRepository(database.agentSessionDao())
     }
 
     val secretStore: SecretStore by lazy {

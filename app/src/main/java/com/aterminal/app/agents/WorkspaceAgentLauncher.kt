@@ -4,12 +4,16 @@ import com.aterminal.app.data.AgentSessionEntity
 import com.aterminal.app.data.WorkspaceEntity
 import com.aterminal.app.errors.TmuxCommandFailedException
 import com.aterminal.app.ssh.SshControlChannel
+import com.aterminal.app.terminal.TerminalSessionSink
 import com.aterminal.app.tmux.TmuxSessionManager
+import com.aterminal.app.tmux.TmuxTerminalAttacher
 
 class WorkspaceAgentLauncher(
     private val launchExecutor: AgentLaunchExecutor,
     private val sessionManager: TmuxSessionManager,
     private val sessionStore: AgentSessionStore,
+    private val terminalAttacher: TmuxTerminalAttacher? = null,
+    private val terminalSessionSink: TerminalSessionSink? = null,
     private val commandBuilder: AgentCommandBuilder = AgentCommandBuilder(),
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
@@ -37,7 +41,11 @@ class WorkspaceAgentLauncher(
                 lastAttachedAtEpochMillis = clock(),
             ),
         )
-        sessionManager.attachSession(request.tmuxSessionName)
+        if (terminalAttacher != null && terminalSessionSink != null) {
+            terminalSessionSink.attach(terminalAttacher.attach(request.tmuxSessionName))
+        } else {
+            sessionManager.attachSession(request.tmuxSessionName)
+        }
 
         return WorkspaceAgentLaunchResult(
             localSessionId = localSessionId,

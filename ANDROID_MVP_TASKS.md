@@ -377,6 +377,22 @@ Acceptance criteria:
 - The Terminal tab receives the attached PTY channel and can stream/read/write through the existing terminal UI.
 - The generated attach command quotes session names safely.
 
+### Milestone 21: Workspace Agent Launch Route
+
+- [x] Wire the Workspaces tab to the active host session.
+- [x] Load saved workspaces for the connected host from the local repository.
+- [x] Launch workspace agent actions by creating detached tmux sessions over the SSH control channel.
+- [x] Attach launched tmux sessions to the shared Terminal PTY.
+- [x] Store launched agent session metadata.
+- [x] Add unit and Compose smoke tests for workspace launch routing.
+- [x] Commit with `feat(workspaces): launch agents from active host`.
+
+Acceptance criteria:
+
+- After connecting to a host, the Workspaces tab shows that host's saved workspaces.
+- Tapping Start Codex creates a detached tmux-backed Codex session and opens it in Terminal.
+- Control-channel launch commands do not attempt interactive tmux attach.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.
