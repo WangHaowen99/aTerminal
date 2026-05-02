@@ -5,6 +5,9 @@ import com.aterminal.app.data.HostEntity
 import com.aterminal.app.security.HostCredentialSecret
 import com.aterminal.app.security.HostCredentialStore
 import com.aterminal.app.ssh.SshAuthCredential
+import com.aterminal.app.ssh.SshControlChannel
+import com.aterminal.app.ssh.SshPtyChannel
+import com.aterminal.app.ssh.SshPtyRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -249,6 +252,33 @@ class HostListViewModelTest {
     }
 
     @Test
+    fun connectHostActivatesReturnedSshSession() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = FakeActiveHostSession(host(id = 7, displayName = "Dev Box"))
+        val activeSessionSink = RecordingActiveHostSessionSink()
+        val viewModel = HostListViewModel(
+            hostStore = FakeHostStore(),
+            credentialStore = FakeHostCredentialStore(
+                credentials = mapOf(7L to HostCredentialSecret.Password("ssh-password")),
+            ),
+            hostConnector = RecordingHostConnector(session = session),
+            activeSessionSink = activeSessionSink,
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.connectHost(
+            host(
+                id = 7,
+                displayName = "Dev Box",
+                authType = AuthType.PASSWORD,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(session), activeSessionSink.activatedSessions)
+    }
+
+    @Test
     fun connectHostUsesStoredPasswordCredential() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val connector = RecordingHostConnector()
@@ -372,6 +402,7 @@ class HostListViewModelTest {
     private class RecordingHostConnector(
         private val error: Throwable? = null,
         private val capabilities: RemoteCapabilities = capabilities(),
+        private val session: ActiveHostSession? = null,
     ) : HostConnector {
         val events = mutableListOf<String>()
 
@@ -381,8 +412,40 @@ class HostListViewModelTest {
         ): HostConnectionResult {
             error?.let { throw it }
             events += "${host.displayName}:$credential"
-            return HostConnectionResult(capabilities)
+            return HostConnectionResult(
+                capabilities = capabilities,
+                session = session,
+            )
         }
+    }
+
+    private class RecordingActiveHostSessionSink : ActiveHostSessionSink {
+        val activatedSessions = mutableListOf<ActiveHostSession>()
+        var clearCount = 0
+
+        override fun activate(session: ActiveHostSession) {
+            activatedSessions += session
+        }
+
+        override fun clear() {
+            clearCount += 1
+        }
+    }
+
+    private class FakeActiveHostSession(
+        override val host: HostEntity,
+    ) : ActiveHostSession {
+        override val capabilities: RemoteCapabilities = capabilities()
+
+        override fun controlChannel(): SshControlChannel {
+            error("Not used by this test.")
+        }
+
+        override suspend fun openPty(request: SshPtyRequest): SshPtyChannel {
+            error("Not used by this test.")
+        }
+
+        override suspend fun disconnect() = Unit
     }
 
     private companion object {

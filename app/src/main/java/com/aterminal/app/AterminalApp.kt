@@ -10,6 +10,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,12 +21,14 @@ import com.aterminal.app.hosts.HostRoute
 import com.aterminal.app.settings.SettingsRoute
 import com.aterminal.app.terminal.TerminalScreen
 import com.aterminal.app.theme.ATerminalTheme
-import com.aterminal.app.tmux.TmuxSessionListScreen
+import com.aterminal.app.tmux.TmuxSessionRoute
 import com.aterminal.app.workspaces.WorkspaceListScreen
 
 @Composable
 fun AterminalApp() {
     ATerminalTheme {
+        val application = LocalContext.current.applicationContext as AterminalApplication
+        val activeSession by application.activeHostSessionStore.session.collectAsStateWithLifecycle()
         val navController = rememberNavController()
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route ?: AppRoute.Hosts.route
@@ -63,7 +67,9 @@ fun AterminalApp() {
             ) {
                 composable(AppRoute.Hosts.route) { HostRoute() }
                 composable(AppRoute.Workspaces.route) { WorkspaceListScreen() }
-                composable(AppRoute.Sessions.route) { TmuxSessionListScreen() }
+                composable(AppRoute.Sessions.route) {
+                    TmuxSessionRoute(activeSession = activeSession)
+                }
                 composable(AppRoute.Terminal.route) { TerminalScreen() }
                 composable(AppRoute.Settings.route) { SettingsRoute() }
             }

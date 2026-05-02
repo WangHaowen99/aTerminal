@@ -20,6 +20,7 @@ class HostListViewModel(
     private val hostStore: HostStore,
     private val credentialStore: HostCredentialStore,
     private val hostConnector: HostConnector = NoopHostConnector,
+    private val activeSessionSink: ActiveHostSessionSink = NoopActiveHostSessionSink,
     private val scope: CoroutineScope? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) : ViewModel() {
@@ -118,6 +119,7 @@ class HostListViewModel(
 
     fun connectHost(host: HostEntity) {
         modelScope.launch {
+            activeSessionSink.clear()
             mutableState.update {
                 it.copy(
                     connectingHostId = host.id,
@@ -160,8 +162,10 @@ class HostListViewModel(
                             ),
                         )
                     }
+                    result.session?.let(activeSessionSink::activate)
                 }
                 .onFailure { error ->
+                    activeSessionSink.clear()
                     mutableState.update {
                         it.copy(
                             connectingHostId = null,
@@ -178,6 +182,7 @@ class HostListViewModel(
         private val hostStore: HostStore,
         private val credentialStore: HostCredentialStore,
         private val hostConnector: HostConnector,
+        private val activeSessionSink: ActiveHostSessionSink,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -186,6 +191,7 @@ class HostListViewModel(
                 hostStore = hostStore,
                 credentialStore = credentialStore,
                 hostConnector = hostConnector,
+                activeSessionSink = activeSessionSink,
             ) as T
         }
     }
@@ -202,6 +208,12 @@ private object NoopHostConnector : HostConnector {
             claude = RemoteToolCapability(available = true),
         ),
     )
+}
+
+private object NoopActiveHostSessionSink : ActiveHostSessionSink {
+    override fun activate(session: ActiveHostSession) = Unit
+
+    override fun clear() = Unit
 }
 
 private data class HostAndCredential(

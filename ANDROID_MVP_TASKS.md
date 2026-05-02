@@ -345,6 +345,22 @@ Acceptance criteria:
 - The connected host card shows whether tmux, Codex, and Claude Code are available.
 - Missing tmux is called out before the user tries a tmux-backed agent action.
 
+### Milestone 19: Active SSH Session and tmux Sessions Route
+
+- [x] Add an `ActiveHostSession` abstraction that retains the connected SSH session.
+- [x] Store the active host session after a successful Host Connect action.
+- [x] Expose the active session through an application-level store.
+- [x] Wire the Sessions tab to create a `TmuxRepository` from the active session control channel.
+- [x] Auto-refresh tmux sessions when a host session becomes active.
+- [x] Add unit and Compose smoke tests for active session state and route wiring.
+- [x] Commit with `feat(tmux): list sessions from active ssh host`.
+
+Acceptance criteria:
+
+- After connecting to a host, the app retains the SSH connection for downstream tmux actions.
+- Opening the Sessions tab uses the active SSH session instead of the previous placeholder state.
+- With no connected host, the Sessions tab still shows the existing connect prompt.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.

@@ -16,10 +16,60 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aterminal.app.hosts.ActiveHostSession
+
+@Composable
+fun TmuxSessionRoute(
+    activeSession: ActiveHostSession?,
+    managerFactory: (ActiveHostSession) -> TmuxSessionManager = { session ->
+        TmuxRepository(session.controlChannel())
+    },
+    modifier: Modifier = Modifier,
+) {
+    if (activeSession == null) {
+        TmuxSessionListScreen(modifier = modifier)
+        return
+    }
+
+    val manager = remember(activeSession) {
+        managerFactory(activeSession)
+    }
+    val routeKey = remember(activeSession) {
+        tmuxSessionRouteKey(activeSession)
+    }
+    val viewModel: TmuxSessionListViewModel = viewModel(
+        key = routeKey,
+        factory = TmuxSessionListViewModel.Factory(manager),
+    )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(routeKey) {
+        viewModel.refresh()
+    }
+
+    TmuxSessionListScreen(
+        state = state,
+        onRefresh = viewModel::refresh,
+        onAttach = viewModel::attachSession,
+        onRequestKill = viewModel::requestKill,
+        onConfirmKill = viewModel::confirmKill,
+        onCancelKill = viewModel::cancelKill,
+        modifier = modifier,
+    )
+}
+
+internal fun tmuxSessionRouteKey(activeSession: ActiveHostSession): String {
+    return "tmux-session-list-${activeSession.host.id}-${System.identityHashCode(activeSession)}"
+}
 
 @Composable
 fun TmuxSessionListScreen(

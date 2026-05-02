@@ -15,6 +15,7 @@ interface HostConnector {
 
 data class HostConnectionResult(
     val capabilities: RemoteCapabilities,
+    val session: ActiveHostSession? = null,
 )
 
 class SshHostConnector(
@@ -38,6 +39,13 @@ class SshHostConnector(
         val capabilities = RemoteCapabilityDetector(
             SshRemoteCapabilityChannel(connection.controlChannel()),
         ).detect()
-        return HostConnectionResult(capabilities)
+        return HostConnectionResult(
+            capabilities = capabilities,
+            session = SshActiveHostSession(
+                host = host,
+                capabilities = capabilities,
+                connection = connection,
+            ),
+        )
     }
 }

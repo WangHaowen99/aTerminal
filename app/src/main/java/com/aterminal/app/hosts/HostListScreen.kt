@@ -39,6 +39,7 @@ fun HostRoute() {
             hostStore = application.hostRepository,
             credentialStore = application.secretStore,
             hostConnector = application.hostConnector,
+            activeSessionSink = application.activeHostSessionStore,
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()

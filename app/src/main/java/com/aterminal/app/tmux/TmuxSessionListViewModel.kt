@@ -1,6 +1,7 @@
 package com.aterminal.app.tmux
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.aterminal.app.errors.UserFacingErrorMessage
 import kotlinx.coroutines.CoroutineScope
@@ -92,6 +93,16 @@ class TmuxSessionListViewModel(
     private fun showError(error: Throwable) {
         mutableState.update {
             it.copy(errorMessage = UserFacingErrorMessage.from(error))
+        }
+    }
+
+    class Factory(
+        private val manager: TmuxSessionManager,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            require(modelClass.isAssignableFrom(TmuxSessionListViewModel::class.java))
+            return TmuxSessionListViewModel(manager = manager) as T
         }
     }
 }

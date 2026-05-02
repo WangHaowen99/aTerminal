@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.aterminal.app.data.AppDatabase
+import com.aterminal.app.hosts.ActiveHostSessionStore
 import com.aterminal.app.hosts.HostRepository
 import com.aterminal.app.hosts.SshHostConnector
 import com.aterminal.app.metadata.MetadataTransferRepository
@@ -38,6 +39,10 @@ class AterminalApplication : Application() {
 
     val hostConnector: SshHostConnector by lazy {
         SshHostConnector()
+    }
+
+    val activeHostSessionStore: ActiveHostSessionStore by lazy {
+        ActiveHostSessionStore()
     }
 
     val metadataTransferRepository: MetadataTransferRepository by lazy {
