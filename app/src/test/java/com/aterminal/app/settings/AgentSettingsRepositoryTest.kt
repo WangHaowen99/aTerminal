@@ -35,6 +35,18 @@ class AgentSettingsRepositoryTest {
     }
 
     @Test
+    fun storesSelectedAppLanguage() = runTest {
+        val repository = AgentSettingsRepository(dataStore(backgroundScope))
+
+        repository.updateAppLanguage(AppLanguage.CHINESE)
+
+        assertEquals(
+            AppLanguage.CHINESE,
+            repository.settings.first().appLanguage,
+        )
+    }
+
+    @Test
     fun parsesDefaultFlagsForAgentLaunches() {
         val settings = AgentSettings(
             codexDefaultFlags = "--model 'gpt 5.4' --search",

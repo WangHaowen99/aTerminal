@@ -30,6 +30,7 @@ class SettingsViewModel(
                     it.copy(
                         codexDefaultFlags = settings.codexDefaultFlags,
                         claudeDefaultFlags = settings.claudeDefaultFlags,
+                        appLanguage = settings.appLanguage,
                     )
                 }
             }
@@ -47,6 +48,13 @@ class SettingsViewModel(
         mutableState.update { it.copy(claudeDefaultFlags = flags) }
         modelScope.launch {
             settingsRepository.updateClaudeDefaultFlags(flags)
+        }
+    }
+
+    fun updateAppLanguage(language: AppLanguage) {
+        mutableState.update { it.copy(appLanguage = language) }
+        modelScope.launch {
+            settingsRepository.updateAppLanguage(language)
         }
     }
 
@@ -112,6 +120,7 @@ class SettingsViewModel(
 data class SettingsUiState(
     val codexDefaultFlags: String = "",
     val claudeDefaultFlags: String = "",
+    val appLanguage: AppLanguage = AppLanguage.ENGLISH,
     val metadataExportPayload: String? = null,
     val importMetadataPayload: String = "",
     val statusMessage: String? = null,

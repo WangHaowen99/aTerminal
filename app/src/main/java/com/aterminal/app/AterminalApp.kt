@@ -19,18 +19,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aterminal.app.hosts.HostRoute
+import com.aterminal.app.settings.AppLanguage
 import com.aterminal.app.settings.SettingsRoute
 import com.aterminal.app.terminal.TerminalScreen
 import com.aterminal.app.terminal.TerminalSessionViewModel
 import com.aterminal.app.theme.ATerminalTheme
 import com.aterminal.app.tmux.TmuxSessionRoute
 import com.aterminal.app.workspaces.WorkspaceRoute
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun AterminalApp() {
     ATerminalTheme {
         val application = LocalContext.current.applicationContext as AterminalApplication
         val activeSession by application.activeHostSessionStore.session.collectAsStateWithLifecycle()
+        val appLanguage by application.agentSettingsRepository.settings
+            .map { it.appLanguage }
+            .collectAsStateWithLifecycle(initialValue = AppLanguage.ENGLISH)
         val terminalViewModel: TerminalSessionViewModel = viewModel()
         val navController = rememberNavController()
         val backStackEntry by navController.currentBackStackEntryAsState()
@@ -56,7 +61,7 @@ fun AterminalApp() {
                                     restoreState = true
                                 }
                             },
-                            label = { Text(route.label) },
+                            label = { Text(route.labelFor(appLanguage)) },
                             icon = { Text(route.iconText) },
                         )
                     }

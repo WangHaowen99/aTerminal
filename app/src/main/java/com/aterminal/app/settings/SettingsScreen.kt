@@ -2,6 +2,7 @@ package com.aterminal.app.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -44,6 +45,7 @@ fun SettingsRoute() {
         onExportMetadata = viewModel::exportMetadata,
         onImportPayloadChange = viewModel::updateImportPayload,
         onImportMetadata = viewModel::importMetadata,
+        onAppLanguageChange = viewModel::updateAppLanguage,
     )
 }
 
@@ -55,8 +57,10 @@ fun SettingsScreen(
     onExportMetadata: () -> Unit,
     onImportPayloadChange: (String) -> Unit,
     onImportMetadata: () -> Unit,
+    onAppLanguageChange: (AppLanguage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = settingsStrings(state.appLanguage)
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -67,43 +71,52 @@ fun SettingsScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            SettingsHeader()
+            SettingsHeader(strings = strings)
+            LanguageCard(
+                appLanguage = state.appLanguage,
+                strings = strings,
+                onAppLanguageChange = onAppLanguageChange,
+            )
             AgentDefaultsCard(
                 codexDefaultFlags = state.codexDefaultFlags,
                 claudeDefaultFlags = state.claudeDefaultFlags,
+                strings = strings,
                 onCodexDefaultFlagsChange = onCodexDefaultFlagsChange,
                 onClaudeDefaultFlagsChange = onClaudeDefaultFlagsChange,
             )
             MetadataTransferCard(
                 state = state,
+                strings = strings,
                 onExportMetadata = onExportMetadata,
                 onImportPayloadChange = onImportPayloadChange,
                 onImportMetadata = onImportMetadata,
             )
-            PrivacyCard()
+            PrivacyCard(strings = strings)
         }
     }
 }
 
 @Composable
-private fun SettingsHeader() {
+private fun SettingsHeader(
+    strings: SettingsStrings,
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "LOCAL POLICY",
+            text = strings.policyEyebrow,
             color = MaterialTheme.colorScheme.secondary,
             fontFamily = FontFamily.Monospace,
             style = MaterialTheme.typography.labelLarge,
         )
         Text(
-            text = "Settings",
+            text = strings.settingsTitle,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.headlineMedium,
         )
         Text(
-            text = "Configure default agent flags, SSH behavior, and reading-mode preferences.",
+            text = strings.settingsDescription,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge,
         )
@@ -111,9 +124,52 @@ private fun SettingsHeader() {
 }
 
 @Composable
+private fun LanguageCard(
+    appLanguage: AppLanguage,
+    strings: SettingsStrings,
+    onAppLanguageChange: (AppLanguage) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = strings.languageTitle,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = strings.languageDescription,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AppLanguage.entries.forEach { language ->
+                    if (language == appLanguage) {
+                        Button(onClick = { onAppLanguageChange(language) }) {
+                            Text(language.displayLabel)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { onAppLanguageChange(language) }) {
+                            Text(language.displayLabel)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun AgentDefaultsCard(
     codexDefaultFlags: String,
     claudeDefaultFlags: String,
+    strings: SettingsStrings,
     onCodexDefaultFlagsChange: (String) -> Unit,
     onClaudeDefaultFlagsChange: (String) -> Unit,
 ) {
@@ -125,14 +181,14 @@ private fun AgentDefaultsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Agent defaults",
+                text = strings.agentDefaultsTitle,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.titleMedium,
             )
             OutlinedTextField(
                 value = codexDefaultFlags,
                 onValueChange = onCodexDefaultFlagsChange,
-                label = { Text("Codex default flags") },
+                label = { Text(strings.codexDefaultFlagsLabel) },
                 placeholder = { Text("--model gpt-5.4") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -140,13 +196,13 @@ private fun AgentDefaultsCard(
             OutlinedTextField(
                 value = claudeDefaultFlags,
                 onValueChange = onClaudeDefaultFlagsChange,
-                label = { Text("Claude default flags") },
+                label = { Text(strings.claudeDefaultFlagsLabel) },
                 placeholder = { Text("--permission-mode acceptEdits") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = "Flags are split like shell arguments and appended to one-tap Codex or Claude launches.",
+                text = strings.agentDefaultsDescription,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -157,6 +213,7 @@ private fun AgentDefaultsCard(
 @Composable
 private fun MetadataTransferCard(
     state: SettingsUiState,
+    strings: SettingsStrings,
     onExportMetadata: () -> Unit,
     onImportPayloadChange: (String) -> Unit,
     onImportMetadata: () -> Unit,
@@ -169,17 +226,17 @@ private fun MetadataTransferCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Metadata transfer",
+                text = strings.metadataTransferTitle,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = "Export/import hosts and workspaces only. Passwords and private keys are never included.",
+                text = strings.metadataTransferDescription,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onExportMetadata) {
-                Text("Export metadata")
+                Text(strings.exportMetadata)
             }
             state.metadataExportPayload?.let { payload ->
                 SelectionContainer {
@@ -194,12 +251,12 @@ private fun MetadataTransferCard(
             OutlinedTextField(
                 value = state.importMetadataPayload,
                 onValueChange = onImportPayloadChange,
-                label = { Text("Paste metadata JSON") },
+                label = { Text(strings.pasteMetadataJson) },
                 minLines = 4,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedButton(onClick = onImportMetadata) {
-                Text("Import metadata")
+                Text(strings.importMetadata)
             }
             state.statusMessage?.let { message ->
                 Text(
@@ -220,7 +277,9 @@ private fun MetadataTransferCard(
 }
 
 @Composable
-private fun PrivacyCard() {
+private fun PrivacyCard(
+    strings: SettingsStrings,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -229,12 +288,12 @@ private fun PrivacyCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Privacy",
+                text = strings.privacyTitle,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = PrivacyNotice,
+                text = strings.privacyNotice,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )

@@ -15,6 +15,7 @@ class AgentSettingsRepository(
         AgentSettings(
             codexDefaultFlags = preferences[CODEX_DEFAULT_FLAGS].orEmpty(),
             claudeDefaultFlags = preferences[CLAUDE_DEFAULT_FLAGS].orEmpty(),
+            appLanguage = AppLanguage.fromStorageValue(preferences[APP_LANGUAGE]),
         )
     }
 
@@ -30,15 +31,23 @@ class AgentSettingsRepository(
         }
     }
 
+    suspend fun updateAppLanguage(language: AppLanguage) {
+        dataStore.edit { preferences ->
+            preferences[APP_LANGUAGE] = language.storageValue
+        }
+    }
+
     private companion object {
         val CODEX_DEFAULT_FLAGS = stringPreferencesKey("codex_default_flags")
         val CLAUDE_DEFAULT_FLAGS = stringPreferencesKey("claude_default_flags")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
     }
 }
 
 data class AgentSettings(
     val codexDefaultFlags: String = "",
     val claudeDefaultFlags: String = "",
+    val appLanguage: AppLanguage = AppLanguage.ENGLISH,
 ) {
     fun flagsFor(agentType: AgentType): List<String> {
         return when (agentType) {

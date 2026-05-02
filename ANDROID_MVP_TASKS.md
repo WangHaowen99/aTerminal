@@ -393,6 +393,21 @@ Acceptance criteria:
 - Tapping Start Codex creates a detached tmux-backed Codex session and opens it in Terminal.
 - Control-channel launch commands do not attempt interactive tmux attach.
 
+### Milestone 22: App Language Switch
+
+- [x] Add an `AppLanguage` setting with English and Chinese options.
+- [x] Persist the selected language through DataStore.
+- [x] Add Settings UI controls for switching between English and 中文.
+- [x] Localize Settings core labels and bottom navigation labels.
+- [x] Add unit and Compose smoke tests for language storage, route labels, and Settings language UI.
+- [x] Commit with `feat(settings): add app language switch`.
+
+Acceptance criteria:
+
+- The user can switch the app language from Settings.
+- The selected language is persisted and restored through app settings.
+- Switching to Chinese updates Settings labels and primary navigation labels.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.
