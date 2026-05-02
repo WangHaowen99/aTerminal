@@ -361,6 +361,22 @@ Acceptance criteria:
 - Opening the Sessions tab uses the active SSH session instead of the previous placeholder state.
 - With no connected host, the Sessions tab still shows the existing connect prompt.
 
+### Milestone 20: tmux Attach to Terminal PTY
+
+- [x] Add a `TmuxPtyAttacher` that opens an SSH PTY and writes a quoted `tmux attach-session` command.
+- [x] Add a terminal session sink so the shared Terminal ViewModel can receive attached PTY channels.
+- [x] Route Sessions tab Attach actions through PTY attach when an active SSH host exists.
+- [x] Navigate to the Terminal tab after a tmux session is attached.
+- [x] Close the previously attached PTY when attaching a new tmux session.
+- [x] Add unit and Compose smoke tests for PTY attach behavior.
+- [x] Commit with `feat(terminal): attach tmux sessions to pty`.
+
+Acceptance criteria:
+
+- Tapping Attach on a tmux session opens an interactive PTY instead of running attach over the control channel.
+- The Terminal tab receives the attached PTY channel and can stream/read/write through the existing terminal UI.
+- The generated attach command quotes session names safely.
+
 ## 3. Definition of Done for MVP
 
 - User can save an SSH host and connect.

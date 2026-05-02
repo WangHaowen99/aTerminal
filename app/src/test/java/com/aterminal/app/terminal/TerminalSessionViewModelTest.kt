@@ -66,6 +66,22 @@ class TerminalSessionViewModelTest {
     }
 
     @Test
+    fun attachingNewPtyClosesPreviousPty() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        var firstClosed = false
+        val viewModel = TerminalSessionViewModel(
+            scope = TestScope(dispatcher),
+            ioDispatcher = dispatcher,
+        )
+
+        viewModel.attach(pty(close = { firstClosed = true }))
+        viewModel.attach(pty())
+        advanceUntilIdle()
+
+        assertTrue(firstClosed)
+    }
+
+    @Test
     fun multilinePasteRequiresConfirmationBeforeWriting() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val remoteInput = ByteArrayOutputStream()
@@ -114,12 +130,13 @@ class TerminalSessionViewModelTest {
         inputText: String = "",
         remoteInput: ByteArrayOutputStream = ByteArrayOutputStream(),
         resize: suspend (SshPtySize) -> Unit = {},
+        close: suspend () -> Unit = {},
     ): SshPtyChannel {
         return SshPtyChannel(
             input = ByteArrayInputStream(inputText.toByteArray(Charsets.UTF_8)),
             output = remoteInput,
             resize = resize,
-            close = {},
+            close = close,
         )
     }
 }

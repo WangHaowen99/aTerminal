@@ -3,6 +3,7 @@ package com.aterminal.app.tmux
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,9 +15,12 @@ import com.aterminal.app.hosts.RemoteToolCapability
 import com.aterminal.app.ssh.SshControlChannel
 import com.aterminal.app.ssh.SshPtyChannel
 import com.aterminal.app.ssh.SshPtyRequest
+import com.aterminal.app.terminal.TerminalSessionSink
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 class TmuxSessionRouteTest {
     @get:Rule
@@ -48,6 +52,38 @@ class TmuxSessionRouteTest {
 
         composeRule.onNodeWithText("aterm:codex:backend-api").assertIsDisplayed()
         assertEquals(1, manager.refreshCount)
+    }
+
+    @Test
+    fun attachOpensPtyAndSendsItToTerminal() {
+        val remoteInput = ByteArrayOutputStream()
+        val pty = pty(remoteInput)
+        val terminalSink = RecordingTerminalSessionSink()
+        var attachedCallbackCount = 0
+
+        composeRule.setContent {
+            TmuxSessionRoute(
+                activeSession = FakeActiveHostSession(pty),
+                managerFactory = {
+                    FakeTmuxSessionManager(
+                        sessions = listOf(session("aterm:codex:backend-api")),
+                    )
+                },
+                terminalSessionSink = terminalSink,
+                onAttachedToTerminal = { attachedCallbackCount += 1 },
+            )
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Attach").performClick()
+        composeRule.waitForIdle()
+
+        assertEquals(listOf(pty), terminalSink.attachedPtys)
+        assertEquals(
+            "tmux attach-session -t 'aterm:codex:backend-api'\n",
+            remoteInput.toString(Charsets.UTF_8.name()),
+        )
+        assertEquals(1, attachedCallbackCount)
     }
 
     @Test
@@ -104,7 +140,17 @@ class TmuxSessionRouteTest {
         override suspend fun detachClient() = Unit
     }
 
-    private class FakeActiveHostSession : ActiveHostSession {
+    private class RecordingTerminalSessionSink : TerminalSessionSink {
+        val attachedPtys = mutableListOf<SshPtyChannel>()
+
+        override fun attach(channel: SshPtyChannel) {
+            attachedPtys += channel
+        }
+    }
+
+    private class FakeActiveHostSession(
+        private val pty: SshPtyChannel = pty(),
+    ) : ActiveHostSession {
         override val host: HostEntity = HostEntity(
             id = 7,
             displayName = "Dev Box",
@@ -126,7 +172,7 @@ class TmuxSessionRouteTest {
         }
 
         override suspend fun openPty(request: SshPtyRequest): SshPtyChannel {
-            error("Not used by this test.")
+            return pty
         }
 
         override suspend fun disconnect() = Unit
@@ -138,4 +184,15 @@ class TmuxSessionRouteTest {
         attached = false,
         windowCount = 1,
     )
+
+    private companion object {
+        fun pty(remoteInput: ByteArrayOutputStream = ByteArrayOutputStream()): SshPtyChannel {
+            return SshPtyChannel(
+                input = ByteArrayInputStream(ByteArray(0)),
+                output = remoteInput,
+                resize = {},
+                close = {},
+            )
+        }
+    }
 }

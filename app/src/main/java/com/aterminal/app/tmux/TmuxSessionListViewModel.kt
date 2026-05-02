@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.aterminal.app.errors.UserFacingErrorMessage
+import com.aterminal.app.terminal.TerminalSessionSink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +14,9 @@ import kotlinx.coroutines.launch
 
 class TmuxSessionListViewModel(
     private val manager: TmuxSessionManager,
+    private val terminalAttacher: TmuxTerminalAttacher? = null,
+    private val terminalSessionSink: TerminalSessionSink? = null,
+    private val onAttachedToTerminal: () -> Unit = {},
     private val scope: CoroutineScope? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(TmuxSessionListUiState())
@@ -45,8 +49,16 @@ class TmuxSessionListViewModel(
 
     fun attachSession(sessionName: String) {
         modelScope.launch {
-            runCatching { manager.attachSession(sessionName) }
-                .onFailure(::showError)
+            runCatching {
+                val attacher = terminalAttacher
+                val terminalSink = terminalSessionSink
+                if (attacher != null && terminalSink != null) {
+                    terminalSink.attach(attacher.attach(sessionName))
+                    onAttachedToTerminal()
+                } else {
+                    manager.attachSession(sessionName)
+                }
+            }.onFailure(::showError)
         }
     }
 
@@ -98,11 +110,19 @@ class TmuxSessionListViewModel(
 
     class Factory(
         private val manager: TmuxSessionManager,
+        private val terminalAttacher: TmuxTerminalAttacher? = null,
+        private val terminalSessionSink: TerminalSessionSink? = null,
+        private val onAttachedToTerminal: () -> Unit = {},
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(TmuxSessionListViewModel::class.java))
-            return TmuxSessionListViewModel(manager = manager) as T
+            return TmuxSessionListViewModel(
+                manager = manager,
+                terminalAttacher = terminalAttacher,
+                terminalSessionSink = terminalSessionSink,
+                onAttachedToTerminal = onAttachedToTerminal,
+            ) as T
         }
     }
 }

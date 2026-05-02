@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aterminal.app.hosts.ActiveHostSession
+import com.aterminal.app.terminal.TerminalSessionSink
 
 @Composable
 fun TmuxSessionRoute(
@@ -33,6 +34,11 @@ fun TmuxSessionRoute(
     managerFactory: (ActiveHostSession) -> TmuxSessionManager = { session ->
         TmuxRepository(session.controlChannel())
     },
+    attacherFactory: (ActiveHostSession) -> TmuxTerminalAttacher = { session ->
+        TmuxPtyAttacher(session)
+    },
+    terminalSessionSink: TerminalSessionSink? = null,
+    onAttachedToTerminal: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     if (activeSession == null) {
@@ -43,12 +49,20 @@ fun TmuxSessionRoute(
     val manager = remember(activeSession) {
         managerFactory(activeSession)
     }
+    val terminalAttacher = remember(activeSession, terminalSessionSink) {
+        terminalSessionSink?.let { attacherFactory(activeSession) }
+    }
     val routeKey = remember(activeSession) {
         tmuxSessionRouteKey(activeSession)
     }
     val viewModel: TmuxSessionListViewModel = viewModel(
         key = routeKey,
-        factory = TmuxSessionListViewModel.Factory(manager),
+        factory = TmuxSessionListViewModel.Factory(
+            manager = manager,
+            terminalAttacher = terminalAttacher,
+            terminalSessionSink = terminalSessionSink,
+            onAttachedToTerminal = onAttachedToTerminal,
+        ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
 

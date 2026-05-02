@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import com.aterminal.app.hosts.HostRoute
 import com.aterminal.app.settings.SettingsRoute
 import com.aterminal.app.terminal.TerminalScreen
+import com.aterminal.app.terminal.TerminalSessionViewModel
 import com.aterminal.app.theme.ATerminalTheme
 import com.aterminal.app.tmux.TmuxSessionRoute
 import com.aterminal.app.workspaces.WorkspaceListScreen
@@ -29,6 +31,7 @@ fun AterminalApp() {
     ATerminalTheme {
         val application = LocalContext.current.applicationContext as AterminalApplication
         val activeSession by application.activeHostSessionStore.session.collectAsStateWithLifecycle()
+        val terminalViewModel: TerminalSessionViewModel = viewModel()
         val navController = rememberNavController()
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route ?: AppRoute.Hosts.route
@@ -68,9 +71,19 @@ fun AterminalApp() {
                 composable(AppRoute.Hosts.route) { HostRoute() }
                 composable(AppRoute.Workspaces.route) { WorkspaceListScreen() }
                 composable(AppRoute.Sessions.route) {
-                    TmuxSessionRoute(activeSession = activeSession)
+                    TmuxSessionRoute(
+                        activeSession = activeSession,
+                        terminalSessionSink = terminalViewModel,
+                        onAttachedToTerminal = {
+                            navController.navigate(AppRoute.Terminal.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
-                composable(AppRoute.Terminal.route) { TerminalScreen() }
+                composable(AppRoute.Terminal.route) {
+                    TerminalScreen(viewModel = terminalViewModel)
+                }
                 composable(AppRoute.Settings.route) { SettingsRoute() }
             }
         }

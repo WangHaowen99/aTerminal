@@ -1,5 +1,7 @@
 package com.aterminal.app.tmux
 
+import com.aterminal.app.ssh.SshPtyChannel
+import com.aterminal.app.terminal.TerminalSessionSink
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -9,6 +11,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class TmuxSessionListViewModelTest {
@@ -43,6 +47,31 @@ class TmuxSessionListViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf("aterm:codex:backend-api"), manager.attachedSessions)
+    }
+
+    @Test
+    fun attachUsesTerminalAttacherWhenConfigured() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val manager = FakeTmuxSessionManager()
+        val pty = pty()
+        val attacher = FakeTmuxTerminalAttacher(pty)
+        val terminalSink = RecordingTerminalSessionSink()
+        var attachedCallbackCount = 0
+        val viewModel = TmuxSessionListViewModel(
+            manager = manager,
+            terminalAttacher = attacher,
+            terminalSessionSink = terminalSink,
+            onAttachedToTerminal = { attachedCallbackCount += 1 },
+            scope = TestScope(dispatcher),
+        )
+
+        viewModel.attachSession("aterm:codex:backend-api")
+        advanceUntilIdle()
+
+        assertEquals(listOf("aterm:codex:backend-api"), attacher.attachedSessionNames)
+        assertEquals(listOf(pty), terminalSink.attachedPtys)
+        assertEquals(1, attachedCallbackCount)
+        assertEquals(emptyList<String>(), manager.attachedSessions)
     }
 
     @Test
@@ -108,10 +137,38 @@ class TmuxSessionListViewModelTest {
         }
     }
 
+    private class FakeTmuxTerminalAttacher(
+        private val pty: SshPtyChannel,
+    ) : TmuxTerminalAttacher {
+        val attachedSessionNames = mutableListOf<String>()
+
+        override suspend fun attach(sessionName: String): SshPtyChannel {
+            attachedSessionNames += sessionName
+            return pty
+        }
+    }
+
+    private class RecordingTerminalSessionSink : TerminalSessionSink {
+        val attachedPtys = mutableListOf<SshPtyChannel>()
+
+        override fun attach(channel: SshPtyChannel) {
+            attachedPtys += channel
+        }
+    }
+
     private fun session(name: String) = TmuxSession(
         name = name,
         createdAtEpochSeconds = 1_710_000_000,
         attached = false,
         windowCount = 1,
     )
+
+    private fun pty(): SshPtyChannel {
+        return SshPtyChannel(
+            input = ByteArrayInputStream(ByteArray(0)),
+            output = ByteArrayOutputStream(),
+            resize = {},
+            close = {},
+        )
+    }
 }

@@ -16,11 +16,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.charset.StandardCharsets
 
+interface TerminalSessionSink {
+    fun attach(channel: SshPtyChannel)
+}
+
 class TerminalSessionViewModel(
     private val buffer: TerminalBuffer = TerminalBuffer(),
     private val scope: CoroutineScope? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : ViewModel() {
+) : ViewModel(), TerminalSessionSink {
     private val mutableState = MutableStateFlow(TerminalUiState())
     val state: StateFlow<TerminalUiState> = mutableState.asStateFlow()
 
@@ -29,9 +33,15 @@ class TerminalSessionViewModel(
     private val terminalScope: CoroutineScope
         get() = scope ?: viewModelScope
 
-    fun attach(channel: SshPtyChannel) {
+    override fun attach(channel: SshPtyChannel) {
         readerJob?.cancel()
+        val previousChannel = ptyChannel
         ptyChannel = channel
+        previousChannel?.let {
+            terminalScope.launch(ioDispatcher) {
+                runCatching { it.close() }
+            }
+        }
         readerJob = terminalScope.launch(ioDispatcher) {
             val chunk = ByteArray(READ_CHUNK_SIZE)
             while (true) {
