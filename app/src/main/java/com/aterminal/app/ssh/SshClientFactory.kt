@@ -2,6 +2,7 @@ package com.aterminal.app.ssh
 
 import net.schmizz.sshj.DefaultConfig
 import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.common.SecurityUtils
 import net.schmizz.sshj.transport.verification.HostKeyVerifier
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 
@@ -9,6 +10,7 @@ class SshClientFactory(
     private val config: SshClientConfig = SshClientConfig(),
 ) {
     fun createClient(): SSHClient {
+        configureAndroidSecurityProvider()
         return SSHClient(createAndroidSafeSshjConfig()).apply {
             addHostKeyVerifier(config.hostKeyVerifier)
             connectTimeout = config.connectTimeoutMillis
@@ -19,6 +21,11 @@ class SshClientFactory(
 
     fun createTransport(): SshTransport {
         return SshjTransport(createClient())
+    }
+
+    private fun configureAndroidSecurityProvider() {
+        SecurityUtils.setSecurityProvider(null)
+        SecurityUtils.setRegisterBouncyCastle(false)
     }
 
     private fun createAndroidSafeSshjConfig(): DefaultConfig {

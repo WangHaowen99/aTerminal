@@ -2,8 +2,10 @@ package com.aterminal.app.ssh
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import net.schmizz.sshj.common.SecurityUtils
 
 class SshClientFactoryTest {
     @Test
@@ -36,6 +38,19 @@ class SshClientFactoryTest {
         assertTrue(
             "SSH client still needs non-X25519 key exchange fallbacks.",
             keyExchangeNames.any { it.startsWith("diffie-hellman-") },
+        )
+    }
+
+    @Test
+    fun createsAndroidSafeSshClientUsingDefaultJceProvider() {
+        SecurityUtils.setSecurityProvider("BC")
+        SecurityUtils.setRegisterBouncyCastle(true)
+
+        SshClientFactory().createClient()
+
+        assertNull(
+            "Android's BC provider can miss algorithms SSHJ needs, so SSHJ should use the default JCE provider.",
+            SecurityUtils.getSecurityProvider(),
         )
     }
 }
