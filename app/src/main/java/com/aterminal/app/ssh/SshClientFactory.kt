@@ -35,6 +35,11 @@ class SshClientFactory(
                     factory.name in X25519_KEY_EXCHANGE_ALGORITHMS
                 },
             )
+            setKeyAlgorithms(
+                keyAlgorithms.filterNot { factory ->
+                    factory.name in ED25519_KEY_ALGORITHMS
+                },
+            )
         }
     }
 
@@ -42,6 +47,10 @@ class SshClientFactory(
         val X25519_KEY_EXCHANGE_ALGORITHMS = setOf(
             "curve25519-sha256",
             "curve25519-sha256@libssh.org",
+        )
+        val ED25519_KEY_ALGORITHMS = setOf(
+            "ssh-ed25519",
+            "ssh-ed25519-cert-v01@openssh.com",
         )
     }
 }

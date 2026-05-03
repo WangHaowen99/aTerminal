@@ -1,11 +1,11 @@
 package com.aterminal.app.ssh
 
+import net.schmizz.sshj.common.SecurityUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import net.schmizz.sshj.common.SecurityUtils
 
 class SshClientFactoryTest {
     @Test
@@ -38,6 +38,22 @@ class SshClientFactoryTest {
         assertTrue(
             "SSH client still needs non-X25519 key exchange fallbacks.",
             keyExchangeNames.any { it.startsWith("diffie-hellman-") },
+        )
+    }
+
+    @Test
+    fun createsAndroidSafeSshClientWithoutEd25519KeyAlgorithms() {
+        val client = SshClientFactory().createClient()
+
+        val keyAlgorithmNames = client.transport.config.keyAlgorithms.map { it.name }
+
+        assertFalse(
+            "Android default JCE provider can miss Ed25519 KeyFactory.",
+            keyAlgorithmNames.any { it.contains("ed25519") },
+        )
+        assertTrue(
+            "SSH client still needs host key algorithm fallbacks.",
+            keyAlgorithmNames.any { it.contains("rsa") || it.contains("ecdsa") },
         )
     }
 
