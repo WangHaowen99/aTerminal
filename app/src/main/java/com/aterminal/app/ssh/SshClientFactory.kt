@@ -1,5 +1,6 @@
 package com.aterminal.app.ssh
 
+import net.schmizz.sshj.DefaultConfig
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.transport.verification.HostKeyVerifier
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
@@ -8,7 +9,7 @@ class SshClientFactory(
     private val config: SshClientConfig = SshClientConfig(),
 ) {
     fun createClient(): SSHClient {
-        return SSHClient().apply {
+        return SSHClient(createAndroidSafeSshjConfig()).apply {
             addHostKeyVerifier(config.hostKeyVerifier)
             connectTimeout = config.connectTimeoutMillis
             timeout = config.readTimeoutMillis
@@ -18,6 +19,23 @@ class SshClientFactory(
 
     fun createTransport(): SshTransport {
         return SshjTransport(createClient())
+    }
+
+    private fun createAndroidSafeSshjConfig(): DefaultConfig {
+        return DefaultConfig().apply {
+            setKeyExchangeFactories(
+                keyExchangeFactories.filterNot { factory ->
+                    factory.name in X25519_KEY_EXCHANGE_ALGORITHMS
+                },
+            )
+        }
+    }
+
+    private companion object {
+        val X25519_KEY_EXCHANGE_ALGORITHMS = setOf(
+            "curve25519-sha256",
+            "curve25519-sha256@libssh.org",
+        )
     }
 }
 
